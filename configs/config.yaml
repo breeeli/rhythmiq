@@ -1,0 +1,18 @@
+server:
+  port: 8085
+  mode: debug  # debug | release | test
+
+database:
+  driver: sqlite
+  dsn: ./data/rhythmiq.db
+
+log:
+  level: info   # debug | info | warn | error
+  format: json  # json | console
+
+ai:
+  provider: mock  # mock | openai | deepseek
+  api_key: ""
+  base_url: ""
+  model: ""
+  timeout: 30

@@ -1,0 +1,43 @@
+package repository
+
+import (
+	"context"
+	"time"
+
+	"github.com/breeeli/rhythmiq/internal/domain"
+)
+
+type UserRepository interface {
+	Create(ctx context.Context, user *domain.User) error
+	FindByID(ctx context.Context, id uint) (*domain.User, error)
+	FindByEmail(ctx context.Context, email string) (*domain.User, error)
+	Update(ctx context.Context, user *domain.User) error
+	Delete(ctx context.Context, id uint) error
+}
+
+type GoalRepository interface {
+	Create(ctx context.Context, goal *domain.Goal) error
+	FindByID(ctx context.Context, id uint) (*domain.Goal, error)
+	FindByUserID(ctx context.Context, userID uint) ([]*domain.Goal, error)
+	Update(ctx context.Context, goal *domain.Goal) error
+	Delete(ctx context.Context, id uint) error
+}
+
+type TaskRepository interface {
+	Create(ctx context.Context, task *domain.Task) error
+	FindByID(ctx context.Context, id uint) (*domain.Task, error)
+	FindByUserID(ctx context.Context, userID uint) ([]*domain.Task, error)
+	FindByGoalID(ctx context.Context, goalID uint) ([]*domain.Task, error)
+	FindPendingByUserID(ctx context.Context, userID uint) ([]*domain.Task, error)
+	Update(ctx context.Context, task *domain.Task) error
+	Delete(ctx context.Context, id uint) error
+}
+
+type PlanRepository interface {
+	Create(ctx context.Context, plan *domain.DailyPlan) error
+	FindByID(ctx context.Context, id uint) (*domain.DailyPlan, error)
+	FindByUserIDAndDate(ctx context.Context, userID uint, date time.Time) (*domain.DailyPlan, error)
+	FindByUserID(ctx context.Context, userID uint) ([]*domain.DailyPlan, error)
+	Update(ctx context.Context, plan *domain.DailyPlan) error
+	Delete(ctx context.Context, id uint) error
+}
