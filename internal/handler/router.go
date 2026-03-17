@@ -3,17 +3,18 @@ package handler
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/breeeli/rhythmiq/internal/middleware"
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
 type Router struct {
-	engine  *gin.Engine
-	user    *UserHandler
-	goal    *GoalHandler
-	task    *TaskHandler
-	plan    *PlanHandler
+	engine      *gin.Engine
+	user        *UserHandler
+	goal        *GoalHandler
+	task        *TaskHandler
+	plan        *PlanHandler
+	constraints *PlanningConstraintHandler
 }
 
 func NewRouter(
@@ -22,13 +23,15 @@ func NewRouter(
 	goal *GoalHandler,
 	task *TaskHandler,
 	plan *PlanHandler,
+	constraints *PlanningConstraintHandler,
 ) *Router {
 	r := &Router{
-		engine: gin.New(),
-		user:   user,
-		goal:   goal,
-		task:   task,
-		plan:   plan,
+		engine:      gin.New(),
+		user:        user,
+		goal:        goal,
+		task:        task,
+		plan:        plan,
+		constraints: constraints,
 	}
 	r.engine.Use(middleware.Recovery(log))
 	r.engine.Use(middleware.Logger(log))
@@ -69,6 +72,15 @@ func (r *Router) register() {
 
 	// Plans — nested under /u/:userID
 	v1.POST("/u/:userID/plans/generate", r.plan.Generate)
-	v1.GET("/u/:userID/plans/today", r.plan.Today)
+	v1.GET("/u/:userID/plans/target", r.plan.ByDate)
 	v1.PUT("/plans/:id/confirm", r.plan.Confirm)
+
+	// Planning constraints
+	v1.GET("/u/:userID/planning-constraints", r.constraints.List)
+	v1.POST("/u/:userID/schedule-rules", r.constraints.CreateScheduleRule)
+	v1.PUT("/schedule-rules/:id", r.constraints.UpdateScheduleRule)
+	v1.DELETE("/schedule-rules/:id", r.constraints.DeleteScheduleRule)
+	v1.POST("/u/:userID/habit-rules", r.constraints.CreateHabitRule)
+	v1.PUT("/habit-rules/:id", r.constraints.UpdateHabitRule)
+	v1.DELETE("/habit-rules/:id", r.constraints.DeleteHabitRule)
 }

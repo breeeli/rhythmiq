@@ -50,6 +50,8 @@ func Migrate(db *gorm.DB) error {
 		&domain.User{},
 		&domain.Goal{},
 		&domain.Task{},
+		&domain.ScheduleRule{},
+		&domain.HabitRule{},
 		&domain.DailyPlan{},
 		&domain.TimeBlock{},
 	)

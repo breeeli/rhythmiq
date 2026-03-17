@@ -1,9 +1,16 @@
 import http from './http'
-import type { ApiResponse, DailyPlan } from '@/types'
+import type {
+  AnchoredPlanningItem,
+  ApiResponse,
+  DailyPlan,
+  FocusPlanningItem,
+} from '@/types'
 
 export interface GeneratePlanPayload {
-  date?: string  // YYYY-MM-DD, defaults to today
-  hint?: string
+  date?: string
+  context_text?: string
+  anchored_items?: AnchoredPlanningItem[]
+  focus_items?: FocusPlanningItem[]
 }
 
 export const planApi = {
@@ -12,8 +19,12 @@ export const planApi = {
       .post<ApiResponse<DailyPlan>>(`/u/${userID}/plans/generate`, data ?? {})
       .then((r) => r.data.data),
 
-  today: (userID: number) =>
-    http.get<ApiResponse<DailyPlan>>(`/u/${userID}/plans/today`).then((r) => r.data.data),
+  byDate: (userID: number, date?: string) =>
+    http
+      .get<ApiResponse<DailyPlan>>(`/u/${userID}/plans/target`, {
+        params: date ? { date } : undefined,
+      })
+      .then((r) => r.data.data),
 
   confirm: (planID: number) =>
     http.put<ApiResponse<DailyPlan>>(`/plans/${planID}/confirm`).then((r) => r.data.data),

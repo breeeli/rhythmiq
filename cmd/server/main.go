@@ -10,13 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/breeeli/rhythmiq/internal/ai/mock"
 	"github.com/breeeli/rhythmiq/internal/config"
 	"github.com/breeeli/rhythmiq/internal/handler"
 	"github.com/breeeli/rhythmiq/internal/repository/sqlite"
 	"github.com/breeeli/rhythmiq/internal/service"
 	"github.com/breeeli/rhythmiq/pkg/database"
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -49,6 +49,8 @@ func main() {
 	goalRepo := sqlite.NewGoalRepo(db)
 	taskRepo := sqlite.NewTaskRepo(db)
 	planRepo := sqlite.NewPlanRepo(db)
+	scheduleRuleRepo := sqlite.NewScheduleRuleRepo(db)
+	habitRuleRepo := sqlite.NewHabitRuleRepo(db)
 
 	// Wire AI planner (swap mock.New() with real implementation when ready)
 	planner := mock.New()
@@ -57,16 +59,18 @@ func main() {
 	userSvc := service.NewUserService(userRepo)
 	goalSvc := service.NewGoalService(goalRepo)
 	taskSvc := service.NewTaskService(taskRepo)
-	plannerSvc := service.NewPlannerService(planRepo, taskRepo, userRepo, planner)
+	constraintSvc := service.NewPlanningConstraintService(scheduleRuleRepo, habitRuleRepo)
+	plannerSvc := service.NewPlannerService(planRepo, taskRepo, userRepo, scheduleRuleRepo, habitRuleRepo, planner)
 
 	// Wire handlers
 	userHandler := handler.NewUserHandler(userSvc)
 	goalHandler := handler.NewGoalHandler(goalSvc)
 	taskHandler := handler.NewTaskHandler(taskSvc)
 	planHandler := handler.NewPlanHandler(plannerSvc)
+	constraintHandler := handler.NewPlanningConstraintHandler(constraintSvc)
 
 	gin.SetMode(cfg.Server.Mode)
-	router := handler.NewRouter(log, userHandler, goalHandler, taskHandler, planHandler)
+	router := handler.NewRouter(log, userHandler, goalHandler, taskHandler, planHandler, constraintHandler)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),

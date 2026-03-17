@@ -6,7 +6,7 @@ const nav = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/goals', label: 'Goals', icon: Target },
   { to: '/tasks', label: 'Tasks', icon: CheckSquare },
-  { to: '/plan', label: "Today's Plan", icon: CalendarDays },
+  { to: '/plan', label: 'Next-Day Planner', icon: CalendarDays },
 ]
 
 export function Sidebar() {

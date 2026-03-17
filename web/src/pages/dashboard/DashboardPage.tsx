@@ -4,6 +4,12 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { useUserStore, useGoalStore, useTaskStore, usePlanStore } from '@/store'
 
+function tomorrowDate() {
+  const date = new Date()
+  date.setDate(date.getDate() + 1)
+  return date.toISOString().slice(0, 10)
+}
+
 function StatCard({
   label,
   value,
@@ -32,14 +38,15 @@ export default function DashboardPage() {
   const { currentUser } = useUserStore()
   const { goals, fetchGoals } = useGoalStore()
   const { tasks, fetchTasks } = useTaskStore()
-  const { todayPlan, fetchToday, generatePlan, loading } = usePlanStore()
+  const { targetPlan, fetchPlan, generatePlan, loading } = usePlanStore()
+  const targetDate = tomorrowDate()
 
   useEffect(() => {
     if (!currentUser) return
     fetchGoals(currentUser.id)
     fetchTasks(currentUser.id)
-    fetchToday(currentUser.id)
-  }, [currentUser, fetchGoals, fetchTasks, fetchToday])
+    fetchPlan(currentUser.id, targetDate)
+  }, [currentUser, fetchGoals, fetchTasks, fetchPlan, targetDate])
 
   const activeGoals = goals.filter((g) => g.status === 'active').length
   const pendingTasks = tasks.filter((t) => t.status === 'todo' || t.status === 'in_progress').length
@@ -63,28 +70,28 @@ export default function DashboardPage() {
         <StatCard label="Done Today" value={doneTasks} icon={TrendingUp} color="bg-emerald-500" />
         <StatCard
           label="Today's Blocks"
-          value={todayPlan?.time_blocks?.length ?? 0}
+          value={targetPlan?.time_blocks?.length ?? 0}
           icon={CalendarDays}
           color="bg-violet-500"
         />
       </div>
 
-      {/* Today's plan preview */}
+      {/* Next-day plan preview */}
       <Card className="mb-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-semibold text-slate-800">Today's Plan</h2>
+          <h2 className="font-semibold text-slate-800">Tomorrow&apos;s Plan</h2>
           <Button
             size="sm"
             loading={loading}
-            onClick={() => currentUser && generatePlan(currentUser.id)}
+            onClick={() => currentUser && generatePlan(currentUser.id, { date: targetDate })}
           >
-            {todayPlan ? 'Regenerate' : 'Generate Plan'}
+            {targetPlan ? 'Regenerate' : 'Generate Plan'}
           </Button>
         </div>
 
-        {todayPlan?.time_blocks?.length ? (
+        {targetPlan?.time_blocks?.length ? (
           <ol className="space-y-2">
-            {todayPlan.time_blocks.map((block) => (
+            {targetPlan.time_blocks.map((block) => (
               <li
                 key={block.id}
                 className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-2.5"
@@ -112,7 +119,7 @@ export default function DashboardPage() {
           </ol>
         ) : (
           <p className="py-8 text-center text-sm text-slate-400">
-            No plan yet — click "Generate Plan" to create one with AI.
+            No plan yet — generate tomorrow&apos;s planner to preview it here.
           </p>
         )}
       </Card>

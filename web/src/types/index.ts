@@ -54,6 +54,62 @@ export interface Task {
 
 export type PlanStatus = 'draft' | 'confirmed' | 'completed'
 export type TimeBlockType = 'work' | 'break' | 'personal' | 'buffer'
+export type ScheduleRuleKind = 'fixed' | 'blocked'
+export type HabitTimePreference = 'morning' | 'afternoon' | 'evening' | 'any'
+export type PlanBlockSourceType =
+  | 'schedule_rule'
+  | 'habit_rule'
+  | 'anchored_item'
+  | 'task'
+  | 'context_item'
+  | 'system_review'
+
+export interface ScheduleRule {
+  id: number
+  created_at: string
+  updated_at: string
+  user_id: number
+  title: string
+  kind: ScheduleRuleKind
+  start_time: string
+  end_time: string
+  days: string[]
+  locked: boolean
+}
+
+export interface HabitRule {
+  id: number
+  created_at: string
+  updated_at: string
+  user_id: number
+  title: string
+  duration_minutes: number
+  days: string[]
+  preferred_time: HabitTimePreference
+  preferred_start: string
+  required: boolean
+}
+
+export interface PlanningConstraints {
+  schedule_rules: ScheduleRule[]
+  habit_rules: HabitRule[]
+}
+
+export interface AnchoredPlanningItem {
+  title: string
+  start_time: string
+  end_time: string
+  note: string
+}
+
+export interface FocusPlanningItem {
+  title: string
+  description: string
+  estimated_minutes: number
+  tag: string
+  priority: string
+  prefer_window: string
+}
 
 export interface TimeBlock {
   id: number
@@ -64,6 +120,11 @@ export interface TimeBlock {
   start_time: string
   end_time: string
   note: string
+  description: string
+  goal: string
+  expected_output: string
+  source_type: PlanBlockSourceType
+  is_locked: boolean
   done: boolean
   task?: Task
 }
@@ -76,6 +137,7 @@ export interface DailyPlan {
   date: string
   status: PlanStatus
   summary: string
+  context: string
   time_blocks: TimeBlock[]
 }
 

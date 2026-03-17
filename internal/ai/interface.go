@@ -9,26 +9,40 @@ import (
 
 // PlanRequest carries all context needed to generate a daily plan.
 type PlanRequest struct {
-	User      *domain.User
-	Tasks     []*domain.Task // pending tasks to schedule
-	Date      time.Time
-	ExtraHint string // optional user instruction, e.g. "I have a dentist at 15:00"
+	User            *domain.User
+	Tasks           []*domain.Task
+	Date            time.Time
+	ContextText     string
+	AnchoredItems   []AnchoredItem
+	CandidateBlocks []CandidateBlock
 }
 
 // PlanResult is the structured output from the AI planner.
 type PlanResult struct {
 	Summary    string
-	TimeBlocks []BlockSuggestion
+	TimeBlocks []CandidateBlock
 }
 
-// BlockSuggestion represents a single suggested time block.
-type BlockSuggestion struct {
-	TaskID    *uint
-	Type      domain.TimeBlockType
+type AnchoredItem struct {
 	Title     string
-	StartTime string // HH:MM
-	EndTime   string // HH:MM
+	StartTime string
+	EndTime   string
 	Note      string
+}
+
+// CandidateBlock represents a pre-allocated plan block that can be enriched by the planner.
+type CandidateBlock struct {
+	TaskID         *uint
+	Type           domain.TimeBlockType
+	Title          string
+	StartTime      string
+	EndTime        string
+	Note           string
+	Description    string
+	Goal           string
+	ExpectedOutput string
+	SourceType     domain.PlanBlockSourceType
+	IsLocked       bool
 }
 
 // Planner is the interface for any AI planning backend.

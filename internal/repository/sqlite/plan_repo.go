@@ -59,7 +59,32 @@ func (r *planRepo) FindByUserID(ctx context.Context, userID uint) ([]*domain.Dai
 }
 
 func (r *planRepo) Update(ctx context.Context, plan *domain.DailyPlan) error {
-	return r.db.WithContext(ctx).Session(&gorm.Session{FullSaveAssociations: true}).Save(plan).Error
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&domain.DailyPlan{}).
+			Where("id = ?", plan.ID).
+			Updates(map[string]interface{}{
+				"user_id": plan.UserID,
+				"date":    plan.Date,
+				"status":  plan.Status,
+				"summary": plan.Summary,
+				"context": plan.Context,
+			}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Where("plan_id = ?", plan.ID).Delete(&domain.TimeBlock{}).Error; err != nil {
+			return err
+		}
+
+		for i := range plan.TimeBlocks {
+			plan.TimeBlocks[i].ID = 0
+			plan.TimeBlocks[i].PlanID = plan.ID
+		}
+		if len(plan.TimeBlocks) == 0 {
+			return nil
+		}
+		return tx.Create(&plan.TimeBlocks).Error
+	})
 }
 
 func (r *planRepo) Delete(ctx context.Context, id uint) error {
