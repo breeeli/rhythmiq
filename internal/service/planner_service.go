@@ -49,6 +49,7 @@ type GenerateNextDayRequest struct {
 
 type AnchoredPlanningItem struct {
 	Title     string `json:"title"`
+	Date      string `json:"date"`
 	StartTime string `json:"start_time"`
 	EndTime   string `json:"end_time"`
 	Note      string `json:"note"`
@@ -254,6 +255,16 @@ func (s *PlannerService) buildCandidateBlocks(
 		if strings.TrimSpace(item.Title) == "" {
 			return nil, nil, fmt.Errorf("anchored item title is required")
 		}
+		if strings.TrimSpace(item.Date) == "" {
+			return nil, nil, fmt.Errorf("anchored item %q date is required", item.Title)
+		}
+		itemDate, err := time.Parse("2006-01-02", item.Date)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid anchored item %q date format, use YYYY-MM-DD", item.Title)
+		}
+		if !normalizeDate(itemDate).Equal(targetDate) {
+			return nil, nil, fmt.Errorf("anchored item %q date must match target date %s", item.Title, targetDate.Format("2006-01-02"))
+		}
 		if err := validateClockRange(item.StartTime, item.EndTime); err != nil {
 			return nil, nil, fmt.Errorf("invalid anchored item %q: %w", item.Title, err)
 		}
@@ -273,6 +284,7 @@ func (s *PlannerService) buildCandidateBlocks(
 		})
 		anchoredForAI = append(anchoredForAI, ai.AnchoredItem{
 			Title:     item.Title,
+			Date:      item.Date,
 			StartTime: item.StartTime,
 			EndTime:   item.EndTime,
 			Note:      item.Note,

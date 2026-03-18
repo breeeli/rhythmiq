@@ -97,6 +97,7 @@ export interface PlanningConstraints {
 
 export interface AnchoredPlanningItem {
   title: string
+  date: string
   start_time: string
   end_time: string
   note: string

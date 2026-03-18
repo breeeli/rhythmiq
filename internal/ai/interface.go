@@ -25,6 +25,7 @@ type PlanResult struct {
 
 type AnchoredItem struct {
 	Title     string
+	Date      string
 	StartTime string
 	EndTime   string
 	Note      string

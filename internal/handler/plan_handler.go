@@ -29,6 +29,7 @@ func (h *PlanHandler) Generate(c *gin.Context) {
 		ContextText   string `json:"context_text"`
 		AnchoredItems []struct {
 			Title     string `json:"title"`
+			Date      string `json:"date"`
 			StartTime string `json:"start_time"`
 			EndTime   string `json:"end_time"`
 			Note      string `json:"note"`
@@ -61,6 +62,7 @@ func (h *PlanHandler) Generate(c *gin.Context) {
 	for _, item := range req.AnchoredItems {
 		anchoredItems = append(anchoredItems, service.AnchoredPlanningItem{
 			Title:     item.Title,
+			Date:      item.Date,
 			StartTime: item.StartTime,
 			EndTime:   item.EndTime,
 			Note:      item.Note,

@@ -103,6 +103,7 @@ export default function PlanPage() {
   })
   const [anchoredItem, setAnchoredItem] = useState<AnchoredPlanningItem>({
     title: '',
+    date: targetDate,
     start_time: '15:00',
     end_time: '16:00',
     note: '',
@@ -124,6 +125,10 @@ export default function PlanPage() {
     fetchPlan(currentUser.id, targetDate)
   }, [currentUser, fetchConstraints, fetchPlan, targetDate])
 
+  useEffect(() => {
+    setAnchoredItem((state) => ({ ...state, date: targetDate }))
+  }, [targetDate])
+
   const handleCreateScheduleRule = async () => {
     if (!currentUser) return
     await createScheduleRule(currentUser.id, scheduleForm)
@@ -139,7 +144,7 @@ export default function PlanPage() {
   const handleAddAnchoredItem = () => {
     if (!anchoredItem.title.trim()) return
     setAnchoredItems((items) => [...items, anchoredItem])
-    setAnchoredItem({ title: '', start_time: '15:00', end_time: '16:00', note: '' })
+    setAnchoredItem({ title: '', date: targetDate, start_time: '15:00', end_time: '16:00', note: '' })
   }
 
   const handleAddFocusItem = () => {
@@ -378,6 +383,12 @@ export default function PlanPage() {
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   placeholder="Weekly sync / dentist / send draft"
                 />
+                <input
+                  type="date"
+                  value={anchoredItem.date}
+                  onChange={(e) => setAnchoredItem((state) => ({ ...state, date: e.target.value }))}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                />
                 <div className="grid grid-cols-2 gap-3">
                   <input
                     type="time"
@@ -411,7 +422,7 @@ export default function PlanPage() {
                       <div>
                         <p className="text-sm font-medium text-slate-800">{item.title}</p>
                         <p className="text-xs text-slate-500">
-                          {item.start_time} - {item.end_time}
+                          {item.date} · {item.start_time} - {item.end_time}
                         </p>
                       </div>
                       <Button variant="ghost" size="sm" onClick={() => setAnchoredItems((items) => items.filter((_, itemIndex) => itemIndex !== index))}>
