@@ -60,12 +60,12 @@ func (h *TaskHandler) Create(c *gin.Context) {
 }
 
 func (h *TaskHandler) Get(c *gin.Context) {
-	id, err := parseUint(c.Param("id"))
+	taskID, err := parseUint(c.Param("taskID"))
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "invalid task id")
 		return
 	}
-	task, err := h.svc.GetByID(c.Request.Context(), id)
+	task, err := h.svc.GetByID(c.Request.Context(), taskID)
 	if err != nil {
 		response.NotFound(c, "task not found")
 		return
@@ -88,9 +88,9 @@ func (h *TaskHandler) List(c *gin.Context) {
 }
 
 func (h *TaskHandler) Update(c *gin.Context) {
-	id, err := parseUint(c.Param("id"))
+	taskID, err := parseUint(c.Param("taskID"))
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "invalid task id")
 		return
 	}
 
@@ -108,7 +108,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		return
 	}
 
-	task, err := h.svc.Update(c.Request.Context(), id, service.UpdateTaskRequest{
+	task, err := h.svc.Update(c.Request.Context(), taskID, service.UpdateTaskRequest{
 		Title:            req.Title,
 		Description:      req.Description,
 		Status:           req.Status,
@@ -125,12 +125,12 @@ func (h *TaskHandler) Update(c *gin.Context) {
 }
 
 func (h *TaskHandler) Delete(c *gin.Context) {
-	id, err := parseUint(c.Param("id"))
+	taskID, err := parseUint(c.Param("taskID"))
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "invalid task id")
 		return
 	}
-	if err := h.svc.Delete(c.Request.Context(), id); err != nil {
+	if err := h.svc.Delete(c.Request.Context(), taskID); err != nil {
 		response.InternalError(c, err.Error())
 		return
 	}

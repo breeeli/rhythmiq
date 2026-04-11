@@ -33,6 +33,24 @@ export interface Goal {
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'skipped'
 export type TaskPriority = 'high' | 'medium' | 'low'
+export type SubtaskStatus = 'todo' | 'in_progress' | 'done' | 'skipped'
+
+export interface Subtask {
+  id: number
+  created_at: string
+  updated_at: string
+  task_id: number
+  title: string
+  description: string
+  status: SubtaskStatus
+  priority: TaskPriority
+  estimated_minutes: number
+  actual_minutes: number
+  prefer_window: string
+  sequence: number
+  depends_on_subtask_id?: number
+  llm_generated: boolean
+}
 
 export interface Task {
   id: number
@@ -50,6 +68,7 @@ export interface Task {
   prefer_morning: boolean
   needs_focus: boolean
   tags: string
+  subtasks?: Subtask[]
 }
 
 export type PlanStatus = 'draft' | 'confirmed' | 'completed'

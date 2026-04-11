@@ -9,7 +9,9 @@ const http = axios.create({
 http.interceptors.response.use(
   (res) => res,
   (err) => {
-    const msg = err.response?.data?.message ?? err.message ?? 'Network error'
+    const rawMsg = err.response?.data?.message ?? err.message
+    const msg =
+      rawMsg === 'Network Error' || !rawMsg ? '网络异常，请稍后重试' : rawMsg
     return Promise.reject(new Error(msg))
   },
 )

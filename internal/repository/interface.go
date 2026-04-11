@@ -33,6 +33,14 @@ type TaskRepository interface {
 	Delete(ctx context.Context, id uint) error
 }
 
+type SubtaskRepository interface {
+	Create(ctx context.Context, subtask *domain.Subtask) error
+	FindByID(ctx context.Context, id uint) (*domain.Subtask, error)
+	FindByTaskID(ctx context.Context, taskID uint) ([]*domain.Subtask, error)
+	Update(ctx context.Context, subtask *domain.Subtask) error
+	Delete(ctx context.Context, id uint) error
+}
+
 type ScheduleRuleRepository interface {
 	Create(ctx context.Context, rule *domain.ScheduleRule) error
 	FindByID(ctx context.Context, id uint) (*domain.ScheduleRule, error)

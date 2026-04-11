@@ -3,6 +3,18 @@ import { CalendarDays, CheckCircle, Clock3, Plus, Sparkles, Trash2 } from 'lucid
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import {
+  formatChineseDate,
+  formatWeekdays,
+  labelFocusTag,
+  labelHabitTimePreference,
+  labelPlanStatus,
+  labelPriority,
+  labelScheduleRuleKind,
+  labelTimeBlockType,
+  labelTimeWindow,
+  labelWeekday,
+} from '@/lib/display'
 import { usePlanStore, useUserStore } from '@/store'
 import type {
   AnchoredPlanningItem,
@@ -57,7 +69,7 @@ function DayPicker({
               active ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600',
             )}
           >
-            {day}
+            {labelWeekday(day)}
           </button>
         )
       })}
@@ -179,10 +191,10 @@ export default function PlanPage() {
             <div className="flex flex-col gap-5 p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="mb-2 text-xs uppercase tracking-[0.24em] text-slate-300">Next-Day Planner</p>
-                  <h1 className="text-3xl font-semibold">Build tomorrow before today ends.</h1>
+                  <p className="mb-2 text-xs uppercase tracking-[0.24em] text-slate-300">次日规划</p>
+                  <h1 className="text-3xl font-semibold">在今天结束前，把明天安排好。</h1>
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                    Save your fixed schedule, reserve recurring habits, then give the planner the context it needs to produce a usable next-day schedule.
+                    先保存固定日程和重复习惯，再补充上下文，让规划器生成一份真正可执行的明日安排。
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
@@ -192,7 +204,7 @@ export default function PlanPage() {
 
               <div className="grid gap-3 md:grid-cols-[180px_1fr_auto]">
                 <label className="text-sm text-slate-300">
-                  Target date
+                  目标日期
                   <input
                     type="date"
                     value={targetDate}
@@ -201,19 +213,23 @@ export default function PlanPage() {
                   />
                 </label>
                 <label className="text-sm text-slate-300">
-                  Recent context
+                  补充上下文
                   <textarea
                     value={contextText}
                     onChange={(e) => setContextText(e.target.value)}
                     rows={3}
                     className="mt-2 w-full rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-400"
-                    placeholder="What matters tomorrow? Include progress, constraints, and expected outputs."
+                    placeholder="明天最重要的事情是什么？可以补充进度、限制条件和预期产出。"
                   />
                 </label>
                 <div className="flex items-end">
-                  <Button className="w-full bg-cyan-400 text-slate-950 hover:bg-cyan-300" loading={loading} onClick={handleGenerate}>
+                  <Button
+                    className="w-full bg-cyan-400 text-slate-950 hover:bg-cyan-300"
+                    loading={loading}
+                    onClick={handleGenerate}
+                  >
                     <Sparkles className="h-4 w-4" />
-                    Generate
+                    生成计划
                   </Button>
                 </div>
               </div>
@@ -230,10 +246,10 @@ export default function PlanPage() {
             <Card>
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-800">Fixed Schedule</h2>
-                  <p className="text-sm text-slate-500">Protected blocks that the planner cannot overwrite.</p>
+                  <h2 className="text-lg font-semibold text-slate-800">固定日程</h2>
+                  <p className="text-sm text-slate-500">这些时间块会被保留，规划器不会覆盖。</p>
                 </div>
-                <Badge variant="info">{constraints.schedule_rules.length} saved</Badge>
+                <Badge variant="info">{constraints.schedule_rules.length} 条</Badge>
               </div>
 
               <div className="space-y-3">
@@ -241,7 +257,7 @@ export default function PlanPage() {
                   value={scheduleForm.title}
                   onChange={(e) => setScheduleForm((state) => ({ ...state, title: e.target.value }))}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                  placeholder="Commute / lunch / fixed meeting"
+                  placeholder="通勤 / 午休 / 固定会议"
                 />
                 <div className="grid grid-cols-3 gap-3">
                   <select
@@ -251,8 +267,8 @@ export default function PlanPage() {
                     }
                     className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   >
-                    <option value="blocked">Blocked</option>
-                    <option value="fixed">Fixed</option>
+                    <option value="blocked">不可占用</option>
+                    <option value="fixed">固定安排</option>
                   </select>
                   <input
                     type="time"
@@ -273,7 +289,7 @@ export default function PlanPage() {
                 />
                 <Button className="w-full" onClick={handleCreateScheduleRule}>
                   <Plus className="h-4 w-4" />
-                  Save Schedule Rule
+                  保存日程规则
                 </Button>
               </div>
 
@@ -283,7 +299,7 @@ export default function PlanPage() {
                     <div>
                       <p className="text-sm font-medium text-slate-800">{rule.title}</p>
                       <p className="text-xs text-slate-500">
-                        {rule.start_time} - {rule.end_time} · {rule.days.join(', ')}
+                        {labelScheduleRuleKind(rule.kind)} · {rule.start_time} - {rule.end_time} · {formatWeekdays(rule.days)}
                       </p>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => currentUser && deleteScheduleRule(rule.id, currentUser.id)}>
@@ -297,10 +313,10 @@ export default function PlanPage() {
             <Card>
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-800">Repeating Habits</h2>
-                  <p className="text-sm text-slate-500">Reserve the routines you want tomorrow to respect.</p>
+                  <h2 className="text-lg font-semibold text-slate-800">重复习惯</h2>
+                  <p className="text-sm text-slate-500">为明天预留你希望保留的日常习惯。</p>
                 </div>
-                <Badge variant="warning">{constraints.habit_rules.length} saved</Badge>
+                <Badge variant="warning">{constraints.habit_rules.length} 条</Badge>
               </div>
 
               <div className="space-y-3">
@@ -308,7 +324,7 @@ export default function PlanPage() {
                   value={habitForm.title}
                   onChange={(e) => setHabitForm((state) => ({ ...state, title: e.target.value }))}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                  placeholder="Dumbbell workout / reading"
+                  placeholder="力量训练 / 阅读"
                 />
                 <div className="grid grid-cols-3 gap-3">
                   <input
@@ -330,10 +346,10 @@ export default function PlanPage() {
                     }
                     className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   >
-                    <option value="morning">Morning</option>
-                    <option value="afternoon">Afternoon</option>
-                    <option value="evening">Evening</option>
-                    <option value="any">Any</option>
+                    <option value="morning">上午</option>
+                    <option value="afternoon">下午</option>
+                    <option value="evening">晚上</option>
+                    <option value="any">任意时段</option>
                   </select>
                   <input
                     type="time"
@@ -348,7 +364,7 @@ export default function PlanPage() {
                 />
                 <Button className="w-full" variant="secondary" onClick={handleCreateHabitRule}>
                   <Clock3 className="h-4 w-4" />
-                  Save Habit Rule
+                  保存习惯规则
                 </Button>
               </div>
 
@@ -358,7 +374,7 @@ export default function PlanPage() {
                     <div>
                       <p className="text-sm font-medium text-slate-800">{rule.title}</p>
                       <p className="text-xs text-slate-500">
-                        {rule.duration_minutes} min · {rule.preferred_start || rule.preferred_time} · {rule.days.join(', ')}
+                        {rule.duration_minutes} 分钟 · {rule.preferred_start || labelHabitTimePreference(rule.preferred_time)} · {formatWeekdays(rule.days)}
                       </p>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => currentUser && deleteHabitRule(rule.id, currentUser.id)}>
@@ -373,15 +389,15 @@ export default function PlanPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <div className="mb-4">
-                <h2 className="text-lg font-semibold text-slate-800">Anchored Items</h2>
-                <p className="text-sm text-slate-500">One-off fixed-time items for tomorrow.</p>
+                <h2 className="text-lg font-semibold text-slate-800">锚点事项</h2>
+                <p className="text-sm text-slate-500">明天一次性的固定时间事项。</p>
               </div>
               <div className="space-y-3">
                 <input
                   value={anchoredItem.title}
                   onChange={(e) => setAnchoredItem((state) => ({ ...state, title: e.target.value }))}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                  placeholder="Weekly sync / dentist / send draft"
+                  placeholder="周会 / 看牙 / 发草稿"
                 />
                 <input
                   type="date"
@@ -408,11 +424,11 @@ export default function PlanPage() {
                   value={anchoredItem.note}
                   onChange={(e) => setAnchoredItem((state) => ({ ...state, note: e.target.value }))}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                  placeholder="Short note for the planner"
+                  placeholder="给规划器的简短说明"
                 />
                 <Button variant="secondary" className="w-full" onClick={handleAddAnchoredItem}>
                   <Plus className="h-4 w-4" />
-                  Add Anchored Item
+                  添加锚点事项
                 </Button>
               </div>
               <div className="mt-5 space-y-2">
@@ -422,10 +438,18 @@ export default function PlanPage() {
                       <div>
                         <p className="text-sm font-medium text-slate-800">{item.title}</p>
                         <p className="text-xs text-slate-500">
-                          {item.date} · {item.start_time} - {item.end_time}
+                          {formatChineseDate(`${item.date}T00:00:00`)} · {item.start_time} - {item.end_time}
                         </p>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => setAnchoredItems((items) => items.filter((_, itemIndex) => itemIndex !== index))}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setAnchoredItems((items) =>
+                            items.filter((_, itemIndex) => itemIndex !== index),
+                          )
+                        }
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -436,22 +460,22 @@ export default function PlanPage() {
 
             <Card>
               <div className="mb-4">
-                <h2 className="text-lg font-semibold text-slate-800">Focus Items</h2>
-                <p className="text-sm text-slate-500">Flexible things you want tomorrow to advance.</p>
+                <h2 className="text-lg font-semibold text-slate-800">推进事项</h2>
+                <p className="text-sm text-slate-500">希望明天推进的弹性事项。</p>
               </div>
               <div className="space-y-3">
                 <input
                   value={focusItem.title}
                   onChange={(e) => setFocusItem((state) => ({ ...state, title: e.target.value }))}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                  placeholder="Draft rules doc / DDIA reading / side project"
+                  placeholder="写规则文档 / 读书 / 做侧项目"
                 />
                 <textarea
                   rows={2}
                   value={focusItem.description}
                   onChange={(e) => setFocusItem((state) => ({ ...state, description: e.target.value }))}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                  placeholder="What should this block try to achieve?"
+                  placeholder="这一段时间希望推进到什么程度？"
                 />
                 <div className="grid grid-cols-3 gap-3">
                   <input
@@ -469,18 +493,18 @@ export default function PlanPage() {
                     onChange={(e) => setFocusItem((state) => ({ ...state, tag: e.target.value }))}
                     className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   >
-                    <option value="work">Work</option>
-                    <option value="learning">Learning</option>
-                    <option value="project">Project</option>
+                    <option value="work">工作</option>
+                    <option value="learning">学习</option>
+                    <option value="project">项目</option>
                   </select>
                   <select
                     value={focusItem.priority}
                     onChange={(e) => setFocusItem((state) => ({ ...state, priority: e.target.value }))}
                     className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
                   >
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
+                    <option value="high">高优先级</option>
+                    <option value="medium">中优先级</option>
+                    <option value="low">低优先级</option>
                   </select>
                 </div>
                 <select
@@ -488,14 +512,14 @@ export default function PlanPage() {
                   onChange={(e) => setFocusItem((state) => ({ ...state, prefer_window: e.target.value }))}
                   className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
                 >
-                  <option value="morning">Prefer morning</option>
-                  <option value="afternoon">Prefer afternoon</option>
-                  <option value="evening">Prefer evening</option>
-                  <option value="any">Any window</option>
+                  <option value="morning">优先安排在上午</option>
+                  <option value="afternoon">优先安排在下午</option>
+                  <option value="evening">优先安排在晚上</option>
+                  <option value="any">任意时段都可以</option>
                 </select>
                 <Button className="w-full" onClick={handleAddFocusItem}>
                   <Plus className="h-4 w-4" />
-                  Add Focus Item
+                  添加推进事项
                 </Button>
               </div>
               <div className="mt-5 space-y-2">
@@ -505,10 +529,23 @@ export default function PlanPage() {
                       <div>
                         <p className="text-sm font-medium text-slate-800">{item.title}</p>
                         <p className="text-xs text-slate-500">
-                          {item.estimated_minutes} min · {item.priority} · {item.prefer_window}
+                          {item.estimated_minutes} 分钟 · {labelPriority(item.priority as 'high' | 'medium' | 'low')} · {labelTimeWindow(item.prefer_window)}
                         </p>
+                        {item.description && (
+                          <p className="mt-1 text-xs text-slate-400">
+                            {labelFocusTag(item.tag)} · {item.description}
+                          </p>
+                        )}
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => setFocusItems((items) => items.filter((_, itemIndex) => itemIndex !== index))}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setFocusItems((items) =>
+                            items.filter((_, itemIndex) => itemIndex !== index),
+                          )
+                        }
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -523,13 +560,20 @@ export default function PlanPage() {
           <Card className="sticky top-6">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-slate-800">Generated Plan</h2>
-                <p className="text-sm text-slate-500">{targetDate}</p>
+                <h2 className="text-lg font-semibold text-slate-800">生成结果</h2>
+                <p className="text-sm text-slate-500">
+                  {formatChineseDate(`${targetDate}T00:00:00`, {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'long',
+                  })}
+                </p>
               </div>
               {targetPlan && targetPlan.status === 'draft' && (
                 <Button variant="secondary" size="sm" onClick={() => confirmPlan(targetPlan.id)}>
                   <CheckCircle className="h-4 w-4" />
-                  Confirm
+                  确认计划
                 </Button>
               )}
             </div>
@@ -537,7 +581,7 @@ export default function PlanPage() {
             {targetPlan && (
               <div className="mb-4 flex items-center gap-3">
                 <Badge variant={targetPlan.status === 'confirmed' ? 'success' : 'warning'}>
-                  {targetPlan.status}
+                  {labelPlanStatus(targetPlan.status)}
                 </Badge>
                 <p className="text-sm text-slate-500">{targetPlan.summary}</p>
               </div>
@@ -553,23 +597,29 @@ export default function PlanPage() {
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div>
                         <p className="font-medium text-slate-800">{block.title}</p>
-                        <p className="text-xs font-mono text-slate-500">
+                        <p className="font-mono text-xs text-slate-500">
                           {block.start_time} - {block.end_time}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        {block.is_locked && <Badge variant="danger">locked</Badge>}
-                        <Badge variant={blockBadge[block.type]}>{block.type}</Badge>
+                        {block.is_locked && <Badge variant="danger">锁定</Badge>}
+                        <Badge variant={blockBadge[block.type]}>{labelTimeBlockType(block.type)}</Badge>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm text-slate-600">
-                      <p>{block.description || block.note}</p>
-                      <p>
-                        <span className="font-medium text-slate-800">Goal:</span> {block.goal}
-                      </p>
-                      <p>
-                        <span className="font-medium text-slate-800">Output:</span> {block.expected_output}
-                      </p>
+                      {(block.description || block.note) && <p>{block.description || block.note}</p>}
+                      {block.goal && (
+                        <p>
+                          <span className="font-medium text-slate-800">目标：</span>
+                          {block.goal}
+                        </p>
+                      )}
+                      {block.expected_output && (
+                        <p>
+                          <span className="font-medium text-slate-800">产出：</span>
+                          {block.expected_output}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -578,7 +628,7 @@ export default function PlanPage() {
               <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-16 text-center">
                 <Sparkles className="mx-auto mb-3 h-8 w-8 text-slate-300" />
                 <p className="text-sm text-slate-500">
-                  Generate tomorrow&apos;s plan to see reserved blocks, work sessions, goals, and outputs.
+                  生成明日计划后，这里会展示保留时段、工作区块、目标和预期产出。
                 </p>
               </div>
             )}

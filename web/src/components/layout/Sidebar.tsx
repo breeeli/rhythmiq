@@ -3,10 +3,10 @@ import { LayoutDashboard, Target, CheckSquare, CalendarDays, Settings } from 'lu
 import clsx from 'clsx'
 
 const nav = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/goals', label: 'Goals', icon: Target },
-  { to: '/tasks', label: 'Tasks', icon: CheckSquare },
-  { to: '/plan', label: 'Next-Day Planner', icon: CalendarDays },
+  { to: '/', label: '总览', icon: LayoutDashboard, end: true },
+  { to: '/goals', label: '目标', icon: Target },
+  { to: '/tasks', label: '任务', icon: CheckSquare },
+  { to: '/plan', label: '次日规划', icon: CalendarDays },
 ]
 
 export function Sidebar() {
@@ -54,7 +54,7 @@ export function Sidebar() {
           }
         >
           <Settings className="h-4 w-4" />
-          Settings
+          设置
         </NavLink>
       </div>
     </aside>

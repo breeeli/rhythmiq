@@ -22,7 +22,9 @@ func (r *taskRepo) Create(ctx context.Context, task *domain.Task) error {
 
 func (r *taskRepo) FindByID(ctx context.Context, id uint) (*domain.Task, error) {
 	var task domain.Task
-	if err := r.db.WithContext(ctx).First(&task, id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("Subtasks", func(db *gorm.DB) *gorm.DB {
+		return db.Order("sequence ASC, created_at ASC")
+	}).First(&task, id).Error; err != nil {
 		return nil, fmt.Errorf("task not found: %w", err)
 	}
 	return &task, nil
@@ -31,6 +33,9 @@ func (r *taskRepo) FindByID(ctx context.Context, id uint) (*domain.Task, error) 
 func (r *taskRepo) FindByUserID(ctx context.Context, userID uint) ([]*domain.Task, error) {
 	var tasks []*domain.Task
 	if err := r.db.WithContext(ctx).
+		Preload("Subtasks", func(db *gorm.DB) *gorm.DB {
+			return db.Order("sequence ASC, created_at ASC")
+		}).
 		Where("user_id = ?", userID).
 		Order("priority DESC, due_date ASC").
 		Find(&tasks).Error; err != nil {
@@ -42,6 +47,9 @@ func (r *taskRepo) FindByUserID(ctx context.Context, userID uint) ([]*domain.Tas
 func (r *taskRepo) FindByGoalID(ctx context.Context, goalID uint) ([]*domain.Task, error) {
 	var tasks []*domain.Task
 	if err := r.db.WithContext(ctx).
+		Preload("Subtasks", func(db *gorm.DB) *gorm.DB {
+			return db.Order("sequence ASC, created_at ASC")
+		}).
 		Where("goal_id = ?", goalID).
 		Find(&tasks).Error; err != nil {
 		return nil, err
@@ -52,6 +60,9 @@ func (r *taskRepo) FindByGoalID(ctx context.Context, goalID uint) ([]*domain.Tas
 func (r *taskRepo) FindPendingByUserID(ctx context.Context, userID uint) ([]*domain.Task, error) {
 	var tasks []*domain.Task
 	if err := r.db.WithContext(ctx).
+		Preload("Subtasks", func(db *gorm.DB) *gorm.DB {
+			return db.Order("sequence ASC, created_at ASC")
+		}).
 		Where("user_id = ? AND status IN ?", userID, []domain.TaskStatus{
 			domain.TaskStatusTodo,
 			domain.TaskStatusInProgress,

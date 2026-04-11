@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Target, CheckSquare, CalendarDays, TrendingUp } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { formatChineseDate } from '@/lib/display'
 import { useUserStore, useGoalStore, useTaskStore, usePlanStore } from '@/store'
 
 function tomorrowDate() {
@@ -56,36 +57,39 @@ export default function DashboardPage() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-800">
-          Good morning{currentUser ? `, ${currentUser.name}` : ''} 👋
+          {currentUser ? `你好，${currentUser.name}` : '你好'}
         </h1>
         <p className="mt-1 text-slate-500">
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          {formatChineseDate(new Date(), {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            weekday: 'long',
+          })}
         </p>
       </div>
 
-      {/* Stats */}
       <div className="mb-8 grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatCard label="Active Goals" value={activeGoals} icon={Target} color="bg-indigo-500" />
-        <StatCard label="Pending Tasks" value={pendingTasks} icon={CheckSquare} color="bg-amber-500" />
-        <StatCard label="Done Today" value={doneTasks} icon={TrendingUp} color="bg-emerald-500" />
+        <StatCard label="进行中目标" value={activeGoals} icon={Target} color="bg-indigo-500" />
+        <StatCard label="待处理任务" value={pendingTasks} icon={CheckSquare} color="bg-amber-500" />
+        <StatCard label="已完成任务" value={doneTasks} icon={TrendingUp} color="bg-emerald-500" />
         <StatCard
-          label="Today's Blocks"
+          label="明日时间块"
           value={targetPlan?.time_blocks?.length ?? 0}
           icon={CalendarDays}
           color="bg-violet-500"
         />
       </div>
 
-      {/* Next-day plan preview */}
       <Card className="mb-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-semibold text-slate-800">Tomorrow&apos;s Plan</h2>
+          <h2 className="font-semibold text-slate-800">明日计划</h2>
           <Button
             size="sm"
             loading={loading}
             onClick={() => currentUser && generatePlan(currentUser.id, { date: targetDate })}
           >
-            {targetPlan ? 'Regenerate' : 'Generate Plan'}
+            {targetPlan ? '重新生成' : '生成计划'}
           </Button>
         </div>
 
@@ -96,8 +100,8 @@ export default function DashboardPage() {
                 key={block.id}
                 className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-2.5"
               >
-                <span className="w-24 shrink-0 text-xs font-mono text-slate-500">
-                  {block.start_time} – {block.end_time}
+                <span className="w-24 shrink-0 font-mono text-xs text-slate-500">
+                  {block.start_time} - {block.end_time}
                 </span>
                 <span
                   className={`h-2 w-2 shrink-0 rounded-full ${
@@ -119,7 +123,7 @@ export default function DashboardPage() {
           </ol>
         ) : (
           <p className="py-8 text-center text-sm text-slate-400">
-            No plan yet — generate tomorrow&apos;s planner to preview it here.
+            还没有计划，生成明日计划后会显示在这里。
           </p>
         )}
       </Card>

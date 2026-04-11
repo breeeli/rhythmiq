@@ -45,5 +45,6 @@ type Task struct {
 
 	Tags string `json:"tags" gorm:"default:''"` // comma-separated
 
-	Goal *Goal `json:"goal,omitempty" gorm:"foreignKey:GoalID"`
+	Goal     *Goal     `json:"goal,omitempty" gorm:"foreignKey:GoalID"`
+	Subtasks []Subtask `json:"subtasks,omitempty" gorm:"foreignKey:TaskID"`
 }

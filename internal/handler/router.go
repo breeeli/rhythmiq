@@ -13,6 +13,7 @@ type Router struct {
 	user        *UserHandler
 	goal        *GoalHandler
 	task        *TaskHandler
+	subtask     *SubtaskHandler
 	plan        *PlanHandler
 	constraints *PlanningConstraintHandler
 }
@@ -22,6 +23,7 @@ func NewRouter(
 	user *UserHandler,
 	goal *GoalHandler,
 	task *TaskHandler,
+	subtask *SubtaskHandler,
 	plan *PlanHandler,
 	constraints *PlanningConstraintHandler,
 ) *Router {
@@ -30,6 +32,7 @@ func NewRouter(
 		user:        user,
 		goal:        goal,
 		task:        task,
+		subtask:     subtask,
 		plan:        plan,
 		constraints: constraints,
 	}
@@ -66,9 +69,12 @@ func (r *Router) register() {
 	// Tasks — nested under /u/:userID
 	v1.GET("/u/:userID/tasks", r.task.List)
 	v1.POST("/u/:userID/tasks", r.task.Create)
-	v1.GET("/tasks/:id", r.task.Get)
-	v1.PUT("/tasks/:id", r.task.Update)
-	v1.DELETE("/tasks/:id", r.task.Delete)
+	v1.GET("/tasks/:taskID", r.task.Get)
+	v1.PUT("/tasks/:taskID", r.task.Update)
+	v1.DELETE("/tasks/:taskID", r.task.Delete)
+	v1.GET("/tasks/:taskID/subtasks", r.subtask.List)
+	v1.POST("/tasks/:taskID/subtasks", r.subtask.Create)
+	v1.PUT("/subtasks/:id", r.subtask.Update)
 
 	// Plans — nested under /u/:userID
 	v1.POST("/u/:userID/plans/generate", r.plan.Generate)

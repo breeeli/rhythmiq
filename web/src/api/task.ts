@@ -1,5 +1,5 @@
 import http from './http'
-import type { ApiResponse, Task, TaskPriority, TaskStatus } from '@/types'
+import type { ApiResponse, Subtask, SubtaskStatus, Task, TaskPriority, TaskStatus } from '@/types'
 
 export interface CreateTaskPayload {
   title: string
@@ -18,6 +18,21 @@ export interface UpdateTaskPayload extends Partial<CreateTaskPayload> {
   actual_minutes?: number
 }
 
+export interface CreateSubtaskPayload {
+  title: string
+  description?: string
+  priority?: TaskPriority
+  estimated_minutes?: number
+  prefer_window?: string
+  depends_on_subtask_id?: number
+  llm_generated?: boolean
+}
+
+export interface UpdateSubtaskPayload extends Partial<CreateSubtaskPayload> {
+  status?: SubtaskStatus
+  actual_minutes?: number
+}
+
 export const taskApi = {
   list: (userID: number) =>
     http.get<ApiResponse<Task[]>>(`/u/${userID}/tasks`).then((r) => r.data.data),
@@ -32,4 +47,13 @@ export const taskApi = {
     http.put<ApiResponse<Task>>(`/tasks/${id}`, data).then((r) => r.data.data),
 
   delete: (id: number) => http.delete(`/tasks/${id}`),
+
+  listSubtasks: (taskID: number) =>
+    http.get<ApiResponse<Subtask[]>>(`/tasks/${taskID}/subtasks`).then((r) => r.data.data),
+
+  createSubtask: (taskID: number, data: CreateSubtaskPayload) =>
+    http.post<ApiResponse<Subtask>>(`/tasks/${taskID}/subtasks`, data).then((r) => r.data.data),
+
+  updateSubtask: (id: number, data: UpdateSubtaskPayload) =>
+    http.put<ApiResponse<Subtask>>(`/subtasks/${id}`, data).then((r) => r.data.data),
 }

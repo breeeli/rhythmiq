@@ -1,6 +1,12 @@
 import { create } from 'zustand'
-import type { Task } from '@/types'
-import { taskApi, type CreateTaskPayload, type UpdateTaskPayload } from '@/api'
+import type { Subtask, Task } from '@/types'
+import {
+  taskApi,
+  type CreateSubtaskPayload,
+  type CreateTaskPayload,
+  type UpdateSubtaskPayload,
+  type UpdateTaskPayload,
+} from '@/api'
 
 interface TaskState {
   tasks: Task[]
@@ -9,6 +15,8 @@ interface TaskState {
   createTask: (userID: number, data: CreateTaskPayload) => Promise<Task>
   updateTask: (id: number, data: UpdateTaskPayload) => Promise<void>
   deleteTask: (id: number) => Promise<void>
+  createSubtask: (taskID: number, data: CreateSubtaskPayload) => Promise<Subtask>
+  updateSubtask: (id: number, data: UpdateSubtaskPayload) => Promise<void>
 }
 
 export const useTaskStore = create<TaskState>()((set, get) => ({
@@ -39,5 +47,27 @@ export const useTaskStore = create<TaskState>()((set, get) => ({
   deleteTask: async (id) => {
     await taskApi.delete(id)
     set({ tasks: get().tasks.filter((t) => t.id !== id) })
+  },
+
+  createSubtask: async (taskID, data) => {
+    const subtask = await taskApi.createSubtask(taskID, data)
+    set({
+      tasks: get().tasks.map((task) =>
+        task.id === taskID
+          ? { ...task, subtasks: [...(task.subtasks ?? []), subtask] }
+          : task,
+      ),
+    })
+    return subtask
+  },
+
+  updateSubtask: async (id, data) => {
+    const updated = await taskApi.updateSubtask(id, data)
+    set({
+      tasks: get().tasks.map((task) => ({
+        ...task,
+        subtasks: (task.subtasks ?? []).map((subtask) => (subtask.id === id ? updated : subtask)),
+      })),
+    })
   },
 }))

@@ -42,24 +42,24 @@ export default function OnboardingPage() {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white">
             <CalendarDays className="h-6 w-6" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">Welcome to Rhythmiq</h1>
-          <p className="text-sm text-slate-500">Set up your profile to get started</p>
+          <h1 className="text-2xl font-bold text-slate-800">欢迎使用 Rhythmiq</h1>
+          <p className="text-sm text-slate-500">先完善你的个人信息，马上开始安排节奏</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Name</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">姓名</label>
             <input
               name="name"
               required
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              placeholder="Your name"
+              placeholder="请输入你的姓名"
               value={form.name}
               onChange={handleChange}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Email</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">邮箱</label>
             <input
               name="email"
               type="email"
@@ -72,7 +72,7 @@ export default function OnboardingPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Wake up</label>
+              <label className="mb-1 block text-xs font-medium text-slate-600">起床时间</label>
               <input
                 name="wake_up_time"
                 type="time"
@@ -82,7 +82,7 @@ export default function OnboardingPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Sleep</label>
+              <label className="mb-1 block text-xs font-medium text-slate-600">睡觉时间</label>
               <input
                 name="sleep_time"
                 type="time"
@@ -92,7 +92,7 @@ export default function OnboardingPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Focus start</label>
+              <label className="mb-1 block text-xs font-medium text-slate-600">专注开始</label>
               <input
                 name="focus_start"
                 type="time"
@@ -102,7 +102,7 @@ export default function OnboardingPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Focus end</label>
+              <label className="mb-1 block text-xs font-medium text-slate-600">专注结束</label>
               <input
                 name="focus_end"
                 type="time"
@@ -116,7 +116,7 @@ export default function OnboardingPage() {
           {error && <p className="text-xs text-red-500">{error}</p>}
 
           <Button type="submit" className="w-full" loading={saving}>
-            Get Started
+            开始使用
           </Button>
         </form>
       </div>

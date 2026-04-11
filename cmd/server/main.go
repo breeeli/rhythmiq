@@ -48,6 +48,7 @@ func main() {
 	userRepo := sqlite.NewUserRepo(db)
 	goalRepo := sqlite.NewGoalRepo(db)
 	taskRepo := sqlite.NewTaskRepo(db)
+	subtaskRepo := sqlite.NewSubtaskRepo(db)
 	planRepo := sqlite.NewPlanRepo(db)
 	scheduleRuleRepo := sqlite.NewScheduleRuleRepo(db)
 	habitRuleRepo := sqlite.NewHabitRuleRepo(db)
@@ -59,6 +60,7 @@ func main() {
 	userSvc := service.NewUserService(userRepo)
 	goalSvc := service.NewGoalService(goalRepo)
 	taskSvc := service.NewTaskService(taskRepo)
+	subtaskSvc := service.NewSubtaskService(subtaskRepo, taskRepo)
 	constraintSvc := service.NewPlanningConstraintService(scheduleRuleRepo, habitRuleRepo)
 	plannerSvc := service.NewPlannerService(planRepo, taskRepo, userRepo, scheduleRuleRepo, habitRuleRepo, planner)
 
@@ -66,11 +68,12 @@ func main() {
 	userHandler := handler.NewUserHandler(userSvc)
 	goalHandler := handler.NewGoalHandler(goalSvc)
 	taskHandler := handler.NewTaskHandler(taskSvc)
+	subtaskHandler := handler.NewSubtaskHandler(subtaskSvc)
 	planHandler := handler.NewPlanHandler(plannerSvc)
 	constraintHandler := handler.NewPlanningConstraintHandler(constraintSvc)
 
 	gin.SetMode(cfg.Server.Mode)
-	router := handler.NewRouter(log, userHandler, goalHandler, taskHandler, planHandler, constraintHandler)
+	router := handler.NewRouter(log, userHandler, goalHandler, taskHandler, subtaskHandler, planHandler, constraintHandler)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
