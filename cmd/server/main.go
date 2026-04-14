@@ -52,6 +52,7 @@ func main() {
 	planRepo := sqlite.NewPlanRepo(db)
 	scheduleRuleRepo := sqlite.NewScheduleRuleRepo(db)
 	habitRuleRepo := sqlite.NewHabitRuleRepo(db)
+	timeBlockRepo := sqlite.NewTimeBlockRuleRepo(db)
 
 	// Wire AI planner (swap mock.New() with real implementation when ready)
 	planner := mock.New()
@@ -64,7 +65,10 @@ func main() {
 	taskSvc := service.NewTaskService(taskRepo, subtaskRepo, taskDecomposer)
 	subtaskSvc := service.NewSubtaskService(subtaskRepo, taskRepo)
 	constraintSvc := service.NewPlanningConstraintService(scheduleRuleRepo, habitRuleRepo)
+	timeBlockSvc := service.NewTimeBlockService(timeBlockRepo)
 	plannerSvc := service.NewPlannerService(planRepo, taskRepo, userRepo, scheduleRuleRepo, habitRuleRepo, planner)
+
+	seedTimeBlocks(timeBlockSvc)
 
 	// Wire handlers
 	userHandler := handler.NewUserHandler(userSvc)
@@ -73,9 +77,10 @@ func main() {
 	subtaskHandler := handler.NewSubtaskHandler(subtaskSvc)
 	planHandler := handler.NewPlanHandler(plannerSvc)
 	constraintHandler := handler.NewPlanningConstraintHandler(constraintSvc)
+	timeBlockHandler := handler.NewTimeBlockHandler(timeBlockSvc)
 
 	gin.SetMode(cfg.Server.Mode)
-	router := handler.NewRouter(log, userHandler, goalHandler, taskHandler, subtaskHandler, planHandler, constraintHandler)
+	router := handler.NewRouter(log, userHandler, goalHandler, taskHandler, subtaskHandler, planHandler, constraintHandler, timeBlockHandler)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
@@ -104,6 +109,25 @@ func main() {
 		log.Error("graceful shutdown failed", zap.Error(err))
 	}
 	log.Info("server stopped")
+}
+
+func seedTimeBlocks(timeBlockSvc *service.TimeBlockService) {
+	ctx := context.Background()
+	existing, err := timeBlockSvc.List(ctx, 1)
+	if err != nil || len(existing) > 0 {
+		return
+	}
+
+	seeds := []service.UpsertTimeBlockRequest{
+		{Title: "晨间例行", StartTime: "08:40", EndTime: "09:20", RecurrenceType: "DAILY"},
+		{Title: "周一团队会", StartTime: "15:00", EndTime: "16:00", RecurrenceType: "WEEKLY", DaysOfWeek: []string{"mon"}},
+		{Title: "朋友来访", StartTime: "18:00", EndTime: "20:00", RecurrenceType: "NONE", Date: time.Now().UTC().AddDate(0, 0, 2).Format("2006-01-02")},
+		{Title: "晚间复盘", StartTime: "21:00", EndTime: "21:30", RecurrenceType: "DAILY"},
+		{Title: "周四同步", StartTime: "10:00", EndTime: "10:30", RecurrenceType: "WEEKLY", DaysOfWeek: []string{"thu"}},
+	}
+	for _, seed := range seeds {
+		_, _ = timeBlockSvc.Create(ctx, 1, seed)
+	}
 }
 
 func buildLogger(cfg config.LogConfig) (*zap.Logger, error) {

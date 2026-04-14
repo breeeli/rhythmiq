@@ -12,7 +12,7 @@ export function TopBar() {
       <div className="flex items-center justify-between gap-4 px-6 py-4 lg:px-8">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.24em] text-sky-600">Rhythmiq</p>
-          <h1 className="text-xl font-semibold text-slate-900">Agent-driven goal & scheduling system</h1>
+          <h1 className="text-xl font-semibold text-slate-900">智能目标与排期系统</h1>
         </div>
 
         <div className="flex items-center gap-3">
@@ -22,14 +22,14 @@ export function TopBar() {
           </Card>
           <Badge variant="primary">
             <Sparkles className="mr-1 h-3.5 w-3.5" />
-            Agent 在线
+            智能体在线
           </Badge>
           <Button variant="secondary" size="sm">
             <Bell className="h-4 w-4" />
             通知
           </Button>
           <div className="rounded-full bg-slate-900 px-3 py-2 text-sm font-medium text-white">
-            {currentUser?.name ?? 'Guest'}
+            {currentUser?.name ?? '访客'}
           </div>
         </div>
       </div>

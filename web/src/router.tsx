@@ -6,7 +6,7 @@ import DashboardPage from '@/pages/dashboard/DashboardPage'
 import GoalsPage from '@/pages/goals/GoalsPage'
 import GoalDetailPage from '@/pages/goals/GoalDetailPage'
 import CalendarPage from '@/pages/calendar/CalendarPage'
-import HabitsPage from '@/pages/habits/HabitsPage'
+import TimeBlocksPage from '@/pages/time-blocks/TimeBlocksPage'
 
 function RequireUser({ children }: { children: React.ReactNode }) {
   const currentUser = useUserStore((s) => s.currentUser)
@@ -29,8 +29,8 @@ const router = createBrowserRouter([
       { path: 'goals', element: <GoalsPage /> },
       { path: 'goals/:goalId', element: <GoalDetailPage /> },
       { path: 'calendar', element: <CalendarPage /> },
-      { path: 'habits', element: <HabitsPage /> },
-      { path: 'plan', element: <Navigate to="/habits" replace /> },
+      { path: 'time-blocks', element: <TimeBlocksPage /> },
+      { path: 'plan', element: <Navigate to="/time-blocks" replace /> },
     ],
   },
   {

@@ -1,13 +1,13 @@
-import { NavLink } from 'react-router-dom'
-import { CalendarDays, LayoutDashboard, Sparkles, Target, HeartHandshake } from 'lucide-react'
 import clsx from 'clsx'
+import { NavLink } from 'react-router-dom'
+import { CalendarDays, Clock3, LayoutDashboard, Sparkles, Target } from 'lucide-react'
 
 const nav = [
-  { to: '/agent', label: 'Agent', icon: Sparkles, end: true },
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/goals', label: 'Goals', icon: Target },
-  { to: '/calendar', label: 'Calendar', icon: CalendarDays },
-  { to: '/habits', label: 'Habits', icon: HeartHandshake },
+  { to: '/agent', label: '智能体', icon: Sparkles, end: true },
+  { to: '/dashboard', label: '总览', icon: LayoutDashboard },
+  { to: '/goals', label: '目标', icon: Target },
+  { to: '/calendar', label: '日历', icon: CalendarDays },
+  { to: '/time-blocks', label: '时间块', icon: Clock3 },
 ]
 
 export function Sidebar() {
@@ -20,7 +20,7 @@ export function Sidebar() {
           </div>
           <div>
             <p className="text-sm font-medium text-white/70">Rhythmiq</p>
-            <p className="text-lg font-semibold">Your control surface</p>
+            <p className="text-lg font-semibold">控制中心</p>
           </div>
         </div>
       </div>
@@ -45,8 +45,8 @@ export function Sidebar() {
       </nav>
 
       <div className="mt-auto rounded-[1.6rem] border border-white/10 bg-white/5 p-4 text-sm text-white/70">
-        <p className="font-medium text-white">控制感面板</p>
-        <p className="mt-1 leading-6">先看 Agent，再看目标、日历与习惯，保持结构清晰。</p>
+        <p className="font-medium text-white">控制面板</p>
+        <p className="mt-1 leading-6">先看 Agent，再看总览、目标、日历和时间块，保持结构清晰。</p>
       </div>
     </aside>
   )

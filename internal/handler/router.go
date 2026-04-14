@@ -16,6 +16,7 @@ type Router struct {
 	subtask     *SubtaskHandler
 	plan        *PlanHandler
 	constraints *PlanningConstraintHandler
+	timeBlock   *TimeBlockHandler
 }
 
 func NewRouter(
@@ -26,6 +27,7 @@ func NewRouter(
 	subtask *SubtaskHandler,
 	plan *PlanHandler,
 	constraints *PlanningConstraintHandler,
+	timeBlock *TimeBlockHandler,
 ) *Router {
 	r := &Router{
 		engine:      gin.New(),
@@ -35,6 +37,7 @@ func NewRouter(
 		subtask:     subtask,
 		plan:        plan,
 		constraints: constraints,
+		timeBlock:   timeBlock,
 	}
 	r.engine.Use(middleware.Recovery(log))
 	r.engine.Use(middleware.Logger(log))
@@ -91,4 +94,10 @@ func (r *Router) register() {
 	v1.POST("/u/:userID/habit-rules", r.constraints.CreateHabitRule)
 	v1.PUT("/habit-rules/:id", r.constraints.UpdateHabitRule)
 	v1.DELETE("/habit-rules/:id", r.constraints.DeleteHabitRule)
+
+	// Time blocks
+	v1.GET("/u/:userID/time-blocks", r.timeBlock.List)
+	v1.POST("/u/:userID/time-blocks", r.timeBlock.Create)
+	v1.PUT("/time-blocks/:id", r.timeBlock.Update)
+	v1.DELETE("/time-blocks/:id", r.timeBlock.Delete)
 }

@@ -57,6 +57,14 @@ type HabitRuleRepository interface {
 	Delete(ctx context.Context, id uint) error
 }
 
+type TimeBlockRuleRepository interface {
+	Create(ctx context.Context, rule *domain.TimeBlockRule) error
+	FindByID(ctx context.Context, id uint) (*domain.TimeBlockRule, error)
+	FindByUserID(ctx context.Context, userID uint) ([]*domain.TimeBlockRule, error)
+	Update(ctx context.Context, rule *domain.TimeBlockRule) error
+	Delete(ctx context.Context, id uint) error
+}
+
 type PlanRepository interface {
 	Create(ctx context.Context, plan *domain.DailyPlan) error
 	FindByID(ctx context.Context, id uint) (*domain.DailyPlan, error)

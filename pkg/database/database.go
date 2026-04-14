@@ -53,6 +53,7 @@ func Migrate(db *gorm.DB) error {
 		&domain.Subtask{},
 		&domain.ScheduleRule{},
 		&domain.HabitRule{},
+		&domain.TimeBlockRule{},
 		&domain.DailyPlan{},
 		&domain.TimeBlock{},
 	)
