@@ -55,11 +55,13 @@ func main() {
 
 	// Wire AI planner (swap mock.New() with real implementation when ready)
 	planner := mock.New()
+	goalGenerator := mock.NewGoalGenerator()
+	taskDecomposer := mock.NewTaskDecomposer()
 
 	// Wire services
 	userSvc := service.NewUserService(userRepo)
-	goalSvc := service.NewGoalService(goalRepo)
-	taskSvc := service.NewTaskService(taskRepo)
+	goalSvc := service.NewGoalService(goalRepo, taskRepo, goalGenerator)
+	taskSvc := service.NewTaskService(taskRepo, subtaskRepo, taskDecomposer)
 	subtaskSvc := service.NewSubtaskService(subtaskRepo, taskRepo)
 	constraintSvc := service.NewPlanningConstraintService(scheduleRuleRepo, habitRuleRepo)
 	plannerSvc := service.NewPlannerService(planRepo, taskRepo, userRepo, scheduleRuleRepo, habitRuleRepo, planner)

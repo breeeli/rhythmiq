@@ -62,6 +62,7 @@ func (r *Router) register() {
 	// Goals — nested under /u/:userID to avoid wildcard conflict with /users/:id
 	v1.GET("/u/:userID/goals", r.goal.List)
 	v1.POST("/u/:userID/goals", r.goal.Create)
+	v1.POST("/u/:userID/goals/generate", r.goal.Generate)
 	v1.GET("/goals/:id", r.goal.Get)
 	v1.PUT("/goals/:id", r.goal.Update)
 	v1.DELETE("/goals/:id", r.goal.Delete)
@@ -72,6 +73,7 @@ func (r *Router) register() {
 	v1.GET("/tasks/:taskID", r.task.Get)
 	v1.PUT("/tasks/:taskID", r.task.Update)
 	v1.DELETE("/tasks/:taskID", r.task.Delete)
+	v1.POST("/tasks/:taskID/decompose", r.task.Decompose)
 	v1.GET("/tasks/:taskID/subtasks", r.subtask.List)
 	v1.POST("/tasks/:taskID/subtasks", r.subtask.Create)
 	v1.PUT("/subtasks/:id", r.subtask.Update)

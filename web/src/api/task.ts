@@ -56,4 +56,7 @@ export const taskApi = {
 
   updateSubtask: (id: number, data: UpdateSubtaskPayload) =>
     http.put<ApiResponse<Subtask>>(`/subtasks/${id}`, data).then((r) => r.data.data),
+
+  decompose: (taskID: number) =>
+    http.post<ApiResponse<Task>>(`/tasks/${taskID}/decompose`).then((r) => r.data.data),
 }

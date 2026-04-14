@@ -136,3 +136,18 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 	}
 	c.Status(http.StatusNoContent)
 }
+
+func (h *TaskHandler) Decompose(c *gin.Context) {
+	taskID, err := parseUint(c.Param("taskID"))
+	if err != nil {
+		response.BadRequest(c, "invalid task id")
+		return
+	}
+
+	task, err := h.svc.Decompose(c.Request.Context(), taskID)
+	if err != nil {
+		response.InternalError(c, err.Error())
+		return
+	}
+	response.OK(c, task)
+}

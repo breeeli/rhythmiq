@@ -14,12 +14,20 @@ export interface UpdateGoalPayload extends Partial<CreateGoalPayload> {
   progress?: number
 }
 
+export interface GenerateGoalPayload {
+  prompt: string
+  context_text?: string
+}
+
 export const goalApi = {
   list: (userID: number) =>
     http.get<ApiResponse<Goal[]>>(`/u/${userID}/goals`).then((r) => r.data.data),
 
   create: (userID: number, data: CreateGoalPayload) =>
     http.post<ApiResponse<Goal>>(`/u/${userID}/goals`, data).then((r) => r.data.data),
+
+  generate: (userID: number, data: GenerateGoalPayload) =>
+    http.post<ApiResponse<Goal>>(`/u/${userID}/goals/generate`, data).then((r) => r.data.data),
 
   getById: (id: number) =>
     http.get<ApiResponse<Goal>>(`/goals/${id}`).then((r) => r.data.data),

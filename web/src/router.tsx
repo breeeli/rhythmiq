@@ -1,23 +1,20 @@
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { useUserStore } from '@/store'
+import AgentPage from '@/pages/agent/AgentPage'
 import DashboardPage from '@/pages/dashboard/DashboardPage'
 import GoalsPage from '@/pages/goals/GoalsPage'
-import TasksPage from '@/pages/tasks/TasksPage'
-import PlanPage from '@/pages/plan/PlanPage'
-import OnboardingPage from '@/pages/OnboardingPage'
+import GoalDetailPage from '@/pages/goals/GoalDetailPage'
+import CalendarPage from '@/pages/calendar/CalendarPage'
+import HabitsPage from '@/pages/habits/HabitsPage'
 
 function RequireUser({ children }: { children: React.ReactNode }) {
   const currentUser = useUserStore((s) => s.currentUser)
-  if (!currentUser) return <Navigate to="/onboarding" replace />
+  if (!currentUser) return <Navigate to="/agent" replace />
   return <>{children}</>
 }
 
 const router = createBrowserRouter([
-  {
-    path: '/onboarding',
-    element: <OnboardingPage />,
-  },
   {
     path: '/',
     element: (
@@ -26,15 +23,19 @@ const router = createBrowserRouter([
       </RequireUser>
     ),
     children: [
-      { index: true, element: <DashboardPage /> },
+      { index: true, element: <Navigate to="/agent" replace /> },
+      { path: 'agent', element: <AgentPage /> },
+      { path: 'dashboard', element: <DashboardPage /> },
       { path: 'goals', element: <GoalsPage /> },
-      { path: 'tasks', element: <TasksPage /> },
-      { path: 'plan', element: <PlanPage /> },
+      { path: 'goals/:goalId', element: <GoalDetailPage /> },
+      { path: 'calendar', element: <CalendarPage /> },
+      { path: 'habits', element: <HabitsPage /> },
+      { path: 'plan', element: <Navigate to="/habits" replace /> },
     ],
   },
   {
     path: '*',
-    element: <Navigate to="/" replace />,
+    element: <Navigate to="/agent" replace />,
   },
 ])
 

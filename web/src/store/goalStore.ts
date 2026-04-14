@@ -1,12 +1,13 @@
 import { create } from 'zustand'
 import type { Goal } from '@/types'
-import { goalApi, type CreateGoalPayload, type UpdateGoalPayload } from '@/api'
+import { goalApi, type CreateGoalPayload, type GenerateGoalPayload, type UpdateGoalPayload } from '@/api'
 
 interface GoalState {
   goals: Goal[]
   loading: boolean
   fetchGoals: (userID: number) => Promise<void>
   createGoal: (userID: number, data: CreateGoalPayload) => Promise<Goal>
+  generateGoal: (userID: number, data: GenerateGoalPayload) => Promise<Goal>
   updateGoal: (id: number, data: UpdateGoalPayload) => Promise<void>
   deleteGoal: (id: number) => Promise<void>
 }
@@ -27,6 +28,12 @@ export const useGoalStore = create<GoalState>()((set, get) => ({
 
   createGoal: async (userID, data) => {
     const goal = await goalApi.create(userID, data)
+    set({ goals: [goal, ...get().goals] })
+    return goal
+  },
+
+  generateGoal: async (userID, data) => {
+    const goal = await goalApi.generate(userID, data)
     set({ goals: [goal, ...get().goals] })
     return goal
   },

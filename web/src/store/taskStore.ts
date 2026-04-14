@@ -17,6 +17,7 @@ interface TaskState {
   deleteTask: (id: number) => Promise<void>
   createSubtask: (taskID: number, data: CreateSubtaskPayload) => Promise<Subtask>
   updateSubtask: (id: number, data: UpdateSubtaskPayload) => Promise<void>
+  decomposeTask: (taskID: number) => Promise<Task>
 }
 
 export const useTaskStore = create<TaskState>()((set, get) => ({
@@ -69,5 +70,11 @@ export const useTaskStore = create<TaskState>()((set, get) => ({
         subtasks: (task.subtasks ?? []).map((subtask) => (subtask.id === id ? updated : subtask)),
       })),
     })
+  },
+
+  decomposeTask: async (taskID) => {
+    const task = await taskApi.decompose(taskID)
+    set({ tasks: get().tasks.map((item) => (item.id === task.id ? task : item)) })
+    return task
   },
 }))

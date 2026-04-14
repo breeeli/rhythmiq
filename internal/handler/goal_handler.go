@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/breeeli/rhythmiq/internal/domain"
 	"github.com/breeeli/rhythmiq/internal/service"
 	"github.com/breeeli/rhythmiq/pkg/response"
+	"github.com/gin-gonic/gin"
 )
 
 type GoalHandler struct {
@@ -43,6 +43,33 @@ func (h *GoalHandler) Create(c *gin.Context) {
 		Type:        req.Type,
 		Priority:    req.Priority,
 		Deadline:    req.Deadline,
+	})
+	if err != nil {
+		response.InternalError(c, err.Error())
+		return
+	}
+	response.Created(c, goal)
+}
+
+func (h *GoalHandler) Generate(c *gin.Context) {
+	userID, err := parseUint(c.Param("userID"))
+	if err != nil {
+		response.BadRequest(c, "invalid user_id")
+		return
+	}
+
+	var req struct {
+		Prompt      string `json:"prompt" binding:"required"`
+		ContextText string `json:"context_text"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	goal, err := h.svc.Generate(c.Request.Context(), userID, service.GenerateGoalRequest{
+		Prompt:      req.Prompt,
+		ContextText: req.ContextText,
 	})
 	if err != nil {
 		response.InternalError(c, err.Error())

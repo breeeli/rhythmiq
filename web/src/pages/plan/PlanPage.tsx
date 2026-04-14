@@ -3,6 +3,8 @@ import { CalendarDays, CheckCircle, Clock3, Plus, Sparkles, Trash2 } from 'lucid
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { SectionBlock } from '@/components/ui/SectionBlock'
+import { Tag } from '@/components/ui/Tag'
 import {
   formatChineseDate,
   formatWeekdays,
@@ -244,13 +246,11 @@ export default function PlanPage() {
 
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-800">固定日程</h2>
-                  <p className="text-sm text-slate-500">这些时间块会被保留，规划器不会覆盖。</p>
-                </div>
-                <Badge variant="info">{constraints.schedule_rules.length} 条</Badge>
-              </div>
+              <SectionBlock
+                title="固定日程"
+                description="这些时间块会被保留，规划器不会覆盖。"
+                action={<Tag variant="primary">{constraints.schedule_rules.length} 条</Tag>}
+              />
 
               <div className="space-y-3">
                 <input
@@ -311,13 +311,11 @@ export default function PlanPage() {
             </Card>
 
             <Card>
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-800">重复习惯</h2>
-                  <p className="text-sm text-slate-500">为明天预留你希望保留的日常习惯。</p>
-                </div>
-                <Badge variant="warning">{constraints.habit_rules.length} 条</Badge>
-              </div>
+              <SectionBlock
+                title="重复习惯"
+                description="为明天预留你希望保留的日常习惯。"
+                action={<Tag variant="warning">{constraints.habit_rules.length} 条</Tag>}
+              />
 
               <div className="space-y-3">
                 <input

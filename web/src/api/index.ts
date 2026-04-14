@@ -1,7 +1,7 @@
 export { userApi } from './user'
 export type { CreateUserPayload, UpdateUserPayload } from './user'
 export { goalApi } from './goal'
-export type { CreateGoalPayload, UpdateGoalPayload } from './goal'
+export type { CreateGoalPayload, UpdateGoalPayload, GenerateGoalPayload } from './goal'
 export { taskApi } from './task'
 export type { CreateTaskPayload, UpdateTaskPayload, CreateSubtaskPayload, UpdateSubtaskPayload } from './task'
 export { planApi } from './plan'

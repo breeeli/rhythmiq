@@ -1,25 +1,31 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Target, CheckSquare, CalendarDays, Settings } from 'lucide-react'
+import { CalendarDays, LayoutDashboard, Sparkles, Target, HeartHandshake } from 'lucide-react'
 import clsx from 'clsx'
 
 const nav = [
-  { to: '/', label: '总览', icon: LayoutDashboard, end: true },
-  { to: '/goals', label: '目标', icon: Target },
-  { to: '/tasks', label: '任务', icon: CheckSquare },
-  { to: '/plan', label: '次日规划', icon: CalendarDays },
+  { to: '/agent', label: 'Agent', icon: Sparkles, end: true },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/goals', label: 'Goals', icon: Target },
+  { to: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { to: '/habits', label: 'Habits', icon: HeartHandshake },
 ]
 
 export function Sidebar() {
   return (
-    <aside className="flex h-screen w-60 flex-col border-r border-slate-200 bg-white">
-      {/* Logo */}
-      <div className="flex h-16 items-center gap-2 border-b border-slate-200 px-5">
-        <CalendarDays className="h-6 w-6 text-indigo-500" />
-        <span className="text-lg font-bold tracking-tight text-slate-800">Rhythmiq</span>
+    <aside className="flex h-[calc(100vh-73px)] w-[248px] flex-col border-r border-slate-200 bg-slate-950 px-4 py-5 text-white">
+      <div className="mb-6 rounded-[1.75rem] bg-white/6 p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-lg shadow-sky-500/30">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-white/70">Rhythmiq</p>
+            <p className="text-lg font-semibold">Your control surface</p>
+          </div>
+        </div>
       </div>
 
-      {/* Nav */}
-      <nav className="flex flex-1 flex-col gap-1 p-3">
+      <nav className="space-y-2">
         {nav.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -27,35 +33,20 @@ export function Sidebar() {
             end={end}
             className={({ isActive }) =>
               clsx(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-indigo-50 text-indigo-700'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-colors',
+                isActive ? 'bg-white text-slate-950' : 'text-white/70 hover:bg-white/8 hover:text-white',
               )
             }
           >
             <Icon className="h-4 w-4" />
-            {label}
+            <span>{label}</span>
           </NavLink>
         ))}
       </nav>
 
-      {/* Bottom */}
-      <div className="border-t border-slate-200 p-3">
-        <NavLink
-          to="/settings"
-          className={({ isActive }) =>
-            clsx(
-              'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-              isActive
-                ? 'bg-indigo-50 text-indigo-700'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-            )
-          }
-        >
-          <Settings className="h-4 w-4" />
-          设置
-        </NavLink>
+      <div className="mt-auto rounded-[1.6rem] border border-white/10 bg-white/5 p-4 text-sm text-white/70">
+        <p className="font-medium text-white">控制感面板</p>
+        <p className="mt-1 leading-6">先看 Agent，再看目标、日历与习惯，保持结构清晰。</p>
       </div>
     </aside>
   )

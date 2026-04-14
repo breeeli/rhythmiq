@@ -10,8 +10,8 @@ export function Card({ children, className, padding = true }: CardProps) {
   return (
     <div
       className={clsx(
-        'rounded-xl border border-slate-200 bg-white shadow-sm',
-        padding && 'p-5',
+        'rounded-3xl border border-slate-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]',
+        padding && 'p-6',
         className,
       )}
     >

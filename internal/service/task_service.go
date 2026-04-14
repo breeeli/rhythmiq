@@ -3,18 +3,26 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/breeeli/rhythmiq/internal/ai"
 	"github.com/breeeli/rhythmiq/internal/domain"
 	"github.com/breeeli/rhythmiq/internal/repository"
 )
 
 type TaskService struct {
-	repo repository.TaskRepository
+	repo        repository.TaskRepository
+	subtaskRepo repository.SubtaskRepository
+	decomposer  ai.TaskDecomposer
 }
 
-func NewTaskService(repo repository.TaskRepository) *TaskService {
-	return &TaskService{repo: repo}
+func NewTaskService(
+	repo repository.TaskRepository,
+	subtaskRepo repository.SubtaskRepository,
+	decomposer ai.TaskDecomposer,
+) *TaskService {
+	return &TaskService{repo: repo, subtaskRepo: subtaskRepo, decomposer: decomposer}
 }
 
 func (s *TaskService) Create(ctx context.Context, userID uint, req CreateTaskRequest) (*domain.Task, error) {
@@ -84,6 +92,60 @@ func (s *TaskService) Update(ctx context.Context, id uint, req UpdateTaskRequest
 
 func (s *TaskService) Delete(ctx context.Context, id uint) error {
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *TaskService) Decompose(ctx context.Context, id uint) (*domain.Task, error) {
+	if s.decomposer == nil {
+		return nil, fmt.Errorf("task decomposer is not configured")
+	}
+
+	task, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := s.decomposer.DecomposeTask(ctx, &ai.TaskDecompositionRequest{Task: task})
+	if err != nil {
+		return nil, fmt.Errorf("decompose task: %w", err)
+	}
+
+	manualCount := 0
+	for _, subtask := range task.Subtasks {
+		if subtask.LLMGenerated {
+			if err := s.subtaskRepo.Delete(ctx, subtask.ID); err != nil {
+				return nil, fmt.Errorf("delete generated subtask %d: %w", subtask.ID, err)
+			}
+			continue
+		}
+		manualCount++
+	}
+
+	sequence := manualCount + 1
+	for _, suggestion := range result.Subtasks {
+		if strings.TrimSpace(suggestion.Title) == "" {
+			continue
+		}
+		subtask := &domain.Subtask{
+			TaskID:           task.ID,
+			Title:            suggestion.Title,
+			Description:      suggestion.Description,
+			Status:           domain.SubtaskStatusTodo,
+			Priority:         domain.TaskPriority(orDefault(string(suggestion.Priority), string(task.Priority))),
+			EstimatedMinutes: suggestion.EstimatedMinutes,
+			PreferWindow:     orDefault(suggestion.PreferWindow, "any"),
+			Sequence:         sequence,
+			LLMGenerated:     true,
+		}
+		if subtask.EstimatedMinutes == 0 {
+			subtask.EstimatedMinutes = 30
+		}
+		if err := s.subtaskRepo.Create(ctx, subtask); err != nil {
+			return nil, fmt.Errorf("create generated subtask: %w", err)
+		}
+		sequence++
+	}
+
+	return s.repo.FindByID(ctx, id)
 }
 
 type CreateTaskRequest struct {
