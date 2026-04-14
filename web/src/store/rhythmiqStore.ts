@@ -13,6 +13,7 @@ export interface Habit {
 export interface ScheduleItem {
   id: number
   day: string
+  date?: string
   start: string
   end: string
   title: string
@@ -363,6 +364,7 @@ interface RhythmiqState {
   modifyPlan: () => void
   regeneratePlan: () => void
   updateDraftPlan: (updater: (plan: AgentPlan) => AgentPlan) => void
+  addSchedule: (schedule: Omit<ScheduleItem, 'id'>) => ScheduleItem
   toggleGoalTask: (goalId: number, taskId: number) => void
   toggleHabit: (habitId: number) => void
   selectGoal: (goalId: number) => void
@@ -497,6 +499,14 @@ export const useRhythmiqStore = create<RhythmiqState>()((set, get) => ({
         messages: nextMessages,
       }
     })
+  },
+
+  addSchedule: (schedule) => {
+    const created = { ...schedule, id: Date.now() }
+    set((state) => ({
+      schedules: [created, ...state.schedules],
+    }))
+    return created
   },
 
   toggleGoalTask: (goalId, taskId) => {

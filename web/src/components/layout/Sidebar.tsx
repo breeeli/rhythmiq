@@ -12,7 +12,7 @@ const nav = [
 
 export function Sidebar() {
   return (
-    <aside className="flex h-[calc(100vh-73px)] w-[248px] flex-col border-r border-slate-200 bg-slate-950 px-4 py-5 text-white">
+    <aside className="sticky top-[73px] flex h-[calc(100vh-73px)] w-[248px] self-start flex-col border-r border-slate-200 bg-slate-950 px-4 py-5 text-white">
       <div className="mb-6 rounded-[1.75rem] bg-white/6 p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-lg shadow-sky-500/30">
