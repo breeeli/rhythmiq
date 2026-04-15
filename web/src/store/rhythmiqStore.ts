@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Goal, GoalPriority, GoalType, Task, TaskStatus } from '@/types'
+import type { Goal, GoalPriority, GoalType, Subtask, Task, TaskStatus } from '@/types'
 
 export interface Habit {
   id: number
@@ -22,6 +22,11 @@ export interface ScheduleItem {
   taskId?: number
   note?: string
 }
+
+type GoalDraft = Partial<Goal> & Pick<Goal, 'title'>
+type TaskDraft = Partial<Task> & Pick<Task, 'title'>
+type SubtaskDraft = Partial<Subtask> & Pick<Subtask, 'title'>
+type ScheduleDraft = Omit<ScheduleItem, 'id'>
 
 export interface AgentPlan {
   goal: Goal
@@ -72,6 +77,22 @@ function makeGoal(overrides: Partial<Goal> & Pick<Goal, 'id' | 'title'>): Goal {
     status: 'active',
     priority: 'medium',
     progress: 0,
+    ...overrides,
+  }
+}
+
+function makeSubtask(overrides: Partial<Subtask> & Pick<Subtask, 'id' | 'task_id' | 'title'>): Subtask {
+  return {
+    created_at: nowIso(),
+    updated_at: nowIso(),
+    description: '',
+    status: 'todo',
+    priority: 'medium',
+    estimated_minutes: 15,
+    actual_minutes: 0,
+    prefer_window: 'any',
+    sequence: 1,
+    llm_generated: false,
     ...overrides,
   }
 }
@@ -271,6 +292,30 @@ const initialTasks: Task[] = [
     prefer_morning: true,
     needs_focus: true,
     tags: 'planning',
+    subtasks: [
+      makeSubtask({
+        id: 121,
+        task_id: 12,
+        title: '整理早餐模板',
+        description: '先压缩最容易犹豫的一餐。',
+        priority: 'high',
+        estimated_minutes: 15,
+        prefer_window: 'morning',
+        sequence: 1,
+        llm_generated: true,
+      }),
+      makeSubtask({
+        id: 122,
+        task_id: 12,
+        title: '确认午晚餐采购清单',
+        description: '减少临时决策。',
+        priority: 'medium',
+        estimated_minutes: 20,
+        prefer_window: 'afternoon',
+        sequence: 2,
+        llm_generated: true,
+      }),
+    ],
   }),
   makeTask({
     id: 13,
@@ -295,6 +340,28 @@ const initialTasks: Task[] = [
     prefer_morning: true,
     needs_focus: true,
     tags: 'learning',
+    subtasks: [
+      makeSubtask({
+        id: 211,
+        task_id: 21,
+        title: '挑选主题与资料',
+        priority: 'high',
+        estimated_minutes: 20,
+        prefer_window: 'morning',
+        sequence: 1,
+        llm_generated: true,
+      }),
+      makeSubtask({
+        id: 212,
+        task_id: 21,
+        title: '输出一页摘要',
+        priority: 'medium',
+        estimated_minutes: 30,
+        prefer_window: 'afternoon',
+        sequence: 2,
+        llm_generated: true,
+      }),
+    ],
   }),
   makeTask({
     id: 22,
@@ -364,7 +431,19 @@ interface RhythmiqState {
   modifyPlan: () => void
   regeneratePlan: () => void
   updateDraftPlan: (updater: (plan: AgentPlan) => AgentPlan) => void
-  addSchedule: (schedule: Omit<ScheduleItem, 'id'>) => ScheduleItem
+  createGoal: (goal: GoalDraft) => Goal
+  updateGoal: (goalId: number, patch: Partial<Goal>) => void
+  deleteGoal: (goalId: number) => void
+  addSchedule: (schedule: ScheduleDraft) => ScheduleItem
+  updateSchedule: (scheduleId: number, patch: Partial<ScheduleItem>) => void
+  deleteSchedule: (scheduleId: number) => void
+  createTask: (goalId: number, task: TaskDraft) => Task
+  updateTask: (taskId: number, patch: Partial<Task>) => void
+  deleteTask: (taskId: number) => void
+  createSubtask: (taskId: number, subtask: SubtaskDraft) => Subtask
+  updateSubtask: (subtaskId: number, patch: Partial<Subtask>) => void
+  deleteSubtask: (subtaskId: number) => void
+  decomposeTask: (taskId: number) => Subtask[]
   toggleGoalTask: (goalId: number, taskId: number) => void
   toggleHabit: (habitId: number) => void
   selectGoal: (goalId: number) => void
@@ -380,6 +459,24 @@ function todayCompletion(habits: Habit[], tasks: Task[]) {
   const habitScore = habits.filter((habit) => habit.completion > 0).length
   const taskScore = tasks.filter((task) => task.status === 'done').length
   return Math.round(((habitScore + taskScore) / Math.max(1, habits.length + tasks.length)) * 100)
+}
+
+function nextId(items: Array<{ id: number }>, seed = 1) {
+  return items.reduce((max, item) => Math.max(max, item.id), seed - 1) + 1
+}
+
+function recalcGoalProgress(goals: Goal[], tasks: Task[], goalId: number) {
+  const progress = recalcProgress(tasks, goalId)
+  return goals.map((goal) =>
+    goal.id === goalId ? { ...goal, progress, updated_at: nowIso() } : goal,
+  )
+}
+
+function removeTaskSubtask(tasks: Task[], subtaskId: number) {
+  return tasks.map((task) => ({
+    ...task,
+    subtasks: (task.subtasks ?? []).filter((subtask) => subtask.id !== subtaskId),
+  }))
 }
 
 function planToMessage(draft: AgentPlan, id = Date.now()): AgentPlanMessage {
@@ -501,11 +598,251 @@ export const useRhythmiqStore = create<RhythmiqState>()((set, get) => ({
     })
   },
 
+  createGoal: (goal) => {
+    const created = makeGoal({
+      id: nextId(get().goals, 1000),
+      title: goal.title,
+      description: goal.description ?? '',
+      type: goal.type ?? 'short_term',
+      status: goal.status ?? 'active',
+      priority: goal.priority ?? 'medium',
+      deadline: goal.deadline,
+      progress: goal.progress ?? 0,
+    })
+
+    set((state) => ({
+      goals: [created, ...state.goals],
+      selectedGoalId: created.id,
+    }))
+
+    return created
+  },
+
+  updateGoal: (goalId, patch) => {
+    set((state) => ({
+      goals: state.goals.map((goal) =>
+        goal.id === goalId
+          ? {
+              ...goal,
+              ...patch,
+              updated_at: nowIso(),
+            }
+          : goal,
+      ),
+    }))
+  },
+
+  deleteGoal: (goalId) => {
+    set((state) => {
+      const goals = state.goals.filter((goal) => goal.id !== goalId)
+      const tasks = state.tasks.filter((task) => task.goal_id !== goalId)
+      const schedules = state.schedules.filter((item) => item.goalId !== goalId)
+
+      return {
+        goals,
+        tasks,
+        schedules,
+        selectedGoalId: state.selectedGoalId === goalId ? goals[0]?.id ?? null : state.selectedGoalId,
+        todayProgress: todayCompletion(state.habits, tasks),
+      }
+    })
+  },
+
   addSchedule: (schedule) => {
     const created = { ...schedule, id: Date.now() }
     set((state) => ({
       schedules: [created, ...state.schedules],
     }))
+    return created
+  },
+
+  updateSchedule: (scheduleId, patch) => {
+    set((state) => ({
+      schedules: state.schedules.map((schedule) =>
+        schedule.id === scheduleId ? { ...schedule, ...patch } : schedule,
+      ),
+    }))
+  },
+
+  deleteSchedule: (scheduleId) => {
+    set((state) => ({
+      schedules: state.schedules.filter((schedule) => schedule.id !== scheduleId),
+    }))
+  },
+
+  createTask: (goalId, task) => {
+    const created = makeTask({
+      id: nextId(get().tasks, 2000),
+      goal_id: goalId,
+      title: task.title,
+      description: task.description ?? '',
+      status: task.status ?? 'todo',
+      priority: task.priority ?? 'medium',
+      estimated_minutes: task.estimated_minutes ?? 30,
+      actual_minutes: task.actual_minutes ?? 0,
+      due_date: task.due_date,
+      prefer_morning: task.prefer_morning ?? false,
+      needs_focus: task.needs_focus ?? false,
+      tags: task.tags ?? '',
+      subtasks: task.subtasks,
+    })
+
+    set((state) => ({
+      tasks: [created, ...state.tasks],
+      goals: recalcGoalProgress(state.goals, [created, ...state.tasks], goalId),
+      todayProgress: todayCompletion(state.habits, [created, ...state.tasks]),
+    }))
+
+    return created
+  },
+
+  updateTask: (taskId, patch) => {
+    set((state) => {
+      const tasks = state.tasks.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              ...patch,
+              updated_at: nowIso(),
+            }
+          : task,
+      )
+      const changed = tasks.find((task) => task.id === taskId)
+      const goals = changed?.goal_id != null ? recalcGoalProgress(state.goals, tasks, changed.goal_id) : state.goals
+
+      return {
+        tasks,
+        goals,
+        todayProgress: todayCompletion(state.habits, tasks),
+      }
+    })
+  },
+
+  deleteTask: (taskId) => {
+    set((state) => {
+      const task = state.tasks.find((item) => item.id === taskId)
+      const tasks = state.tasks.filter((item) => item.id !== taskId)
+      const goals = task?.goal_id != null ? recalcGoalProgress(state.goals, tasks, task.goal_id) : state.goals
+      return {
+        tasks,
+        goals,
+        todayProgress: todayCompletion(state.habits, tasks),
+      }
+    })
+  },
+
+  createSubtask: (taskId, subtask) => {
+    const created = makeSubtask({
+      id: nextId(get().tasks.flatMap((task) => task.subtasks ?? []), 5000),
+      task_id: taskId,
+      title: subtask.title,
+      description: subtask.description ?? '',
+      status: subtask.status ?? 'todo',
+      priority: subtask.priority ?? 'medium',
+      estimated_minutes: subtask.estimated_minutes ?? 15,
+      actual_minutes: subtask.actual_minutes ?? 0,
+      prefer_window: subtask.prefer_window ?? 'any',
+      sequence: subtask.sequence ?? (get().tasks.find((task) => task.id === taskId)?.subtasks?.length ?? 0) + 1,
+      depends_on_subtask_id: subtask.depends_on_subtask_id,
+      llm_generated: subtask.llm_generated ?? false,
+    })
+
+    set((state) => ({
+      tasks: state.tasks.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              subtasks: [...(task.subtasks ?? []), created],
+              updated_at: nowIso(),
+            }
+          : task,
+      ),
+    }))
+
+    return created
+  },
+
+  updateSubtask: (subtaskId, patch) => {
+    set((state) => {
+      const tasks = state.tasks.map((task) => ({
+        ...task,
+        subtasks: (task.subtasks ?? []).map((subtask) =>
+          subtask.id === subtaskId
+            ? {
+                ...subtask,
+                ...patch,
+                updated_at: nowIso(),
+              }
+            : subtask,
+        ),
+      }))
+
+      const owningTask = tasks.find((task) => (task.subtasks ?? []).some((subtask) => subtask.id === subtaskId))
+      const goals =
+        owningTask?.goal_id != null ? recalcGoalProgress(state.goals, tasks, owningTask.goal_id) : state.goals
+
+      return {
+        tasks,
+        goals,
+      }
+    })
+  },
+
+  deleteSubtask: (subtaskId) => {
+    set((state) => {
+      const task = state.tasks.find((item) => (item.subtasks ?? []).some((subtask) => subtask.id === subtaskId))
+      const tasks = removeTaskSubtask(state.tasks, subtaskId)
+      const goals = task?.goal_id != null ? recalcGoalProgress(state.goals, tasks, task.goal_id) : state.goals
+
+      return {
+        tasks,
+        goals,
+      }
+    })
+  },
+
+  decomposeTask: (taskId) => {
+    const task = get().tasks.find((item) => item.id === taskId)
+    if (!task) return []
+
+    const seed = task.title.replace(/[：:]/g, ' ').trim()
+    const subtasks = [
+      `${seed} - 梳理范围`,
+      `${seed} - 形成执行动作`,
+      `${seed} - 检查完成条件`,
+    ]
+
+    const created = subtasks.map((title, index) =>
+      makeSubtask({
+        id: nextId(get().tasks.flatMap((item) => item.subtasks ?? []), 6000) + index,
+        task_id: taskId,
+        title,
+        description: index === 0 ? '先收窄问题边界。' : index === 1 ? '把动作拆到更小颗粒度。' : '确认什么算完成。',
+        priority: index === 0 ? 'high' : index === 1 ? 'medium' : 'low',
+        estimated_minutes: 10 + index * 10,
+        prefer_window: index === 0 ? 'morning' : index === 1 ? 'afternoon' : 'any',
+        sequence: index + 1,
+        llm_generated: true,
+      }),
+    )
+
+    set((state) => {
+      const tasks = state.tasks.map((item) =>
+        item.id === taskId
+          ? {
+              ...item,
+              subtasks: [...(item.subtasks ?? []), ...created],
+              updated_at: nowIso(),
+            }
+          : item,
+      )
+
+      return {
+        tasks,
+        goals: task.goal_id != null ? recalcGoalProgress(state.goals, tasks, task.goal_id) : state.goals,
+      }
+    })
+
     return created
   },
 
