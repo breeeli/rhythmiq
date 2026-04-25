@@ -12,45 +12,35 @@ export interface User {
   max_daily_work_hours: number
 }
 
-export type GoalStatus = 'active' | 'completed' | 'archived'
+export type GoalStatus = 'draft' | 'active' | 'completed' | 'archived' | 'abandoned'
+export type GoalSource = 'manual' | 'llm'
 export type GoalPriority = 'high' | 'medium' | 'low'
-export type GoalType = 'long_term' | 'short_term'
 
 export interface Goal {
   id: number
   created_at: string
   updated_at: string
   user_id: number
+  parent_goal_id?: number
   title: string
   description: string
-  type: GoalType
   status: GoalStatus
+  source: GoalSource
   priority: GoalPriority
   deadline?: string
+  start_date?: string
+  target_date?: string
+  review_date?: string
+  outcome: string
+  success_criteria: string[]
+  motivation: string
   progress: number
+  child_goals?: Goal[]
   tasks?: Task[]
 }
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'skipped'
 export type TaskPriority = 'high' | 'medium' | 'low'
-export type SubtaskStatus = 'todo' | 'in_progress' | 'done' | 'skipped'
-
-export interface Subtask {
-  id: number
-  created_at: string
-  updated_at: string
-  task_id: number
-  title: string
-  description: string
-  status: SubtaskStatus
-  priority: TaskPriority
-  estimated_minutes: number
-  actual_minutes: number
-  prefer_window: string
-  sequence: number
-  depends_on_subtask_id?: number
-  llm_generated: boolean
-}
 
 export interface Task {
   id: number
@@ -60,6 +50,7 @@ export interface Task {
   goal_id?: number
   title: string
   description: string
+  expected_output: string
   status: TaskStatus
   priority: TaskPriority
   estimated_minutes: number
@@ -67,8 +58,8 @@ export interface Task {
   due_date?: string
   prefer_morning: boolean
   needs_focus: boolean
+  sequence: number
   tags: string
-  subtasks?: Subtask[]
 }
 
 export type PlanStatus = 'draft' | 'confirmed' | 'completed'

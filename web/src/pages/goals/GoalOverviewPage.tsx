@@ -1,307 +1,276 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import clsx from 'clsx'
+import { ArrowUpDown, PencilLine, Plus, Search, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
-import { SectionBlock } from '@/components/ui/SectionBlock'
-import { FilterBar, type GoalSortKey } from '@/components/goals/FilterBar'
-import { GoalCard } from '@/components/goals/GoalCard'
-import { TopSummaryBar } from '@/components/goals/TopSummaryBar'
+import { GoalModal } from '@/components/goals/GoalModal'
+import { ProgressBar } from '@/components/ui/ProgressBar'
+import { Tag } from '@/components/ui/Tag'
+import { labelGoalStatus } from '@/lib/display'
 import { useGoalStore, useUserStore } from '@/store'
-import type { CreateGoalPayload } from '@/api'
-import type { Goal } from '@/types'
-import { buildGoalCardView } from '@/lib/goalPresentation'
+import type { Goal, GoalStatus } from '@/types'
 
-const defaultCreateForm: CreateGoalPayload = {
-  title: '',
-  description: '',
-  priority: 'medium',
-  deadline: '',
-}
+type StatusFilter = GoalStatus | 'all'
+type SortKey = 'updated' | 'deadline' | 'progress'
 
-function parseDate(value?: string) {
-  if (!value) return null
+const statusTabs: Array<{ key: StatusFilter; label: string }> = [
+  { key: 'all', label: '全部' },
+  { key: 'active', label: '进行中' },
+  { key: 'draft', label: '草稿' },
+  { key: 'completed', label: '已完成' },
+  { key: 'archived', label: '已归档' },
+]
+
+function toDateValue(value?: string) {
+  if (!value) return ''
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date
+  if (Number.isNaN(date.getTime())) return value.slice(0, 10)
+  return date.toISOString().slice(0, 10)
 }
 
-function daysUntil(value?: string) {
-  const date = parseDate(value)
-  if (!date) return Number.POSITIVE_INFINITY
-  const start = new Date()
-  start.setHours(0, 0, 0, 0)
-  const target = new Date(date)
-  target.setHours(0, 0, 0, 0)
-  return Math.round((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+function primaryDate(goal: Goal) {
+  return goal.target_date || goal.deadline || goal.review_date || goal.updated_at
 }
 
-function isNearDeadline(goal: Goal) {
-  const remaining = daysUntil(goal.deadline)
-  return remaining >= 0 && remaining <= 7
+function toTimestamp(value?: string) {
+  if (!value) return Number.POSITIVE_INFINITY
+  const timestamp = new Date(value).getTime()
+  return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp
 }
 
-function isUrgent(goal: Goal) {
-  return goal.priority === 'high' && (isNearDeadline(goal) || goal.progress < 45)
+function formatDate(value?: string) {
+  return toDateValue(value) || '未设置'
 }
 
-function priorityRank(priority: Goal['priority']) {
-  if (priority === 'high') return 0
-  if (priority === 'medium') return 1
-  return 2
+function relativeTime(value?: string) {
+  if (!value) return '—'
+  const diff = Date.now() - new Date(value).getTime()
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes} 分钟前`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} 小时前`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days} 天前`
+  return toDateValue(value)
 }
 
-function focusScore(goal: Goal) {
-  const deadlineUrgency = Number.isFinite(daysUntil(goal.deadline)) ? Math.max(0, 14 - daysUntil(goal.deadline)) : 0
-  const statusWeight = goal.status === 'active' ? 0 : goal.status === 'completed' ? 150 : 100
-  return priorityRank(goal.priority) * -100 + deadlineUrgency * 10 + (100 - goal.progress) - statusWeight
-}
-
-function sortGoals(goals: Goal[], sortBy: GoalSortKey) {
-  return [...goals].sort((left, right) => {
-    if (sortBy === 'priority') {
-      const priorityDelta = priorityRank(left.priority) - priorityRank(right.priority)
-      if (priorityDelta !== 0) return priorityDelta
-      return focusScore(right) - focusScore(left)
-    }
-
-    if (sortBy === 'deadline') {
-      const leftDeadline = daysUntil(left.deadline)
-      const rightDeadline = daysUntil(right.deadline)
-      if (leftDeadline !== rightDeadline) return leftDeadline - rightDeadline
-      return focusScore(right) - focusScore(left)
-    }
-
-    if (left.progress !== right.progress) return left.progress - right.progress
-    return focusScore(right) - focusScore(left)
-  })
-}
-
-function averageProgress(goals: Goal[]) {
-  if (!goals.length) return 0
-  return goals.reduce((sum, goal) => sum + goal.progress, 0) / goals.length
+function statusTagVariant(status: GoalStatus) {
+  if (status === 'active') return 'primary' as const
+  if (status === 'completed') return 'success' as const
+  if (status === 'draft') return 'warning' as const
+  return 'neutral' as const
 }
 
 export default function GoalOverviewPage() {
   const navigate = useNavigate()
-  const currentUser = useUserStore((state) => state.currentUser)
-  const goals = useGoalStore((state) => state.goals)
-  const loading = useGoalStore((state) => state.loading)
-  const error = useGoalStore((state) => state.error)
-  const fetchGoals = useGoalStore((state) => state.fetchGoals)
-  const createGoal = useGoalStore((state) => state.createGoal)
+  const currentUser = useUserStore((s) => s.currentUser)
+  const goals = useGoalStore((s) => s.goals)
+  const loading = useGoalStore((s) => s.loading)
+  const error = useGoalStore((s) => s.error)
+  const fetchGoals = useGoalStore((s) => s.fetchGoals)
+  const deleteGoal = useGoalStore((s) => s.deleteGoal)
+  const fetchedRef = useRef<number | null>(null)
 
-  const [sortBy, setSortBy] = useState<GoalSortKey>('priority')
-  const [showHighPriorityOnly, setShowHighPriorityOnly] = useState(false)
-  const [showNearDeadlineOnly, setShowNearDeadlineOnly] = useState(false)
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [isCreating, setIsCreating] = useState(false)
-  const [createForm, setCreateForm] = useState<CreateGoalPayload>(defaultCreateForm)
-  const fetchedUserIdRef = useRef<number | null>(null)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
+  const [searchValue, setSearchValue] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('updated')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingGoal, setEditingGoal] = useState<Goal | undefined>()
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!currentUser) return
-    if (fetchedUserIdRef.current === currentUser.id) return
-    fetchedUserIdRef.current = currentUser.id
+    if (!currentUser || fetchedRef.current === currentUser.id) return
+    fetchedRef.current = currentUser.id
     fetchGoals(currentUser.id).catch(() => undefined)
   }, [currentUser, fetchGoals])
 
+  const counts = useMemo(() => {
+    const c: Record<StatusFilter, number> = { all: goals.length, draft: 0, active: 0, completed: 0, archived: 0, abandoned: 0 }
+    for (const g of goals) c[g.status] = (c[g.status] ?? 0) + 1
+    return c
+  }, [goals])
+
   const filteredGoals = useMemo(() => {
-    return goals.filter((goal) => {
-      if (showHighPriorityOnly && goal.priority !== 'high') return false
-      if (showNearDeadlineOnly && !isNearDeadline(goal)) return false
-      return true
+    const search = searchValue.trim().toLowerCase()
+    const byStatus = statusFilter === 'all' ? goals : goals.filter((g) => g.status === statusFilter)
+    const bySearch = search
+      ? byStatus.filter((g) => [g.title, g.description, g.outcome].some((v) => v?.toLowerCase().includes(search)))
+      : byStatus
+    return [...bySearch].sort((a, b) => {
+      if (sortKey === 'progress') return b.progress - a.progress
+      if (sortKey === 'deadline') return toTimestamp(primaryDate(a)) - toTimestamp(primaryDate(b))
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     })
-  }, [goals, showHighPriorityOnly, showNearDeadlineOnly])
+  }, [goals, searchValue, sortKey, statusFilter])
 
-  const visibleGoals = useMemo(() => sortGoals(filteredGoals, sortBy), [filteredGoals, sortBy])
-  const focusCandidates = visibleGoals.length > 0 ? visibleGoals : sortGoals(goals, 'priority')
-  const focusGoal = [...focusCandidates].sort((left, right) => focusScore(right) - focusScore(left))[0] ?? goals[0]
-  const focusView = focusGoal ? buildGoalCardView(focusGoal) : null
+  const openCreate = () => {
+    setEditingGoal(undefined)
+    setModalOpen(true)
+  }
 
-  const totalGoals = goals.length
-  const activeGoals = goals.filter((goal) => goal.status === 'active').length
-  const averageGoalProgress = averageProgress(goals)
-  const nearDeadlineCount = goals.filter(isNearDeadline).length
+  const openEdit = (goal: Goal, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingGoal(goal)
+    setModalOpen(true)
+  }
 
-  const handleCreateGoal = async () => {
-    if (!currentUser || !createForm.title.trim()) return
-    setIsCreating(true)
-    try {
-      const created = await createGoal(currentUser.id, {
-        title: createForm.title.trim(),
-        description: createForm.description?.trim() || undefined,
-        priority: createForm.priority,
-        deadline: createForm.deadline || undefined,
-      })
-
-      setCreateForm(defaultCreateForm)
-      setShowCreateForm(false)
-      navigate(`/goals/${created.id}`)
-    } finally {
-      setIsCreating(false)
-    }
+  const handleDelete = async (goal: Goal, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!window.confirm(`删除目标「${goal.title}」？`)) return
+    await deleteGoal(goal.id)
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#f5f7fb_100%)]">
-      <div className="mx-auto max-w-7xl space-y-6 px-6 py-6 lg:px-8 lg:py-8">
-        <SectionBlock
-          title="目标总览"
-          description="这是一个决策页，不是任务页。先看目标，再决定下一步。"
-          action={
-            <Button type="button" onClick={() => setShowCreateForm((value) => !value)}>
-              添加目标
-            </Button>
-          }
-        />
-
-        {showCreateForm && (
-          <Card className="border-sky-100 bg-white/90 shadow-[0_14px_40px_rgba(14,165,233,0.08)]">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">添加目标</p>
-                  <p className="text-xs text-slate-500">目标会自动进入后端，详情页会继续展示下一步行动。</p>
-                </div>
-                <Badge variant="info">后端接口</Badge>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="space-y-2">
-                  <span className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">目标标题</span>
-                  <input
-                    value={createForm.title}
-                    onChange={(event) => setCreateForm((state) => ({ ...state, title: event.target.value }))}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-300"
-                    placeholder="例如：完成产品发布准备"
-                  />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">优先级</span>
-                  <select
-                    value={createForm.priority}
-                    onChange={(event) =>
-                      setCreateForm((state) => ({ ...state, priority: event.target.value as CreateGoalPayload['priority'] }))
-                    }
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none"
-                  >
-                    <option value="high">高优先级</option>
-                    <option value="medium">中优先级</option>
-                    <option value="low">低优先级</option>
-                  </select>
-                </label>
-              </div>
-
-              <label className="space-y-2">
-                <span className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">目标描述</span>
-                <textarea
-                  value={createForm.description ?? ''}
-                  onChange={(event) => setCreateForm((state) => ({ ...state, description: event.target.value }))}
-                  rows={3}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-300"
-                  placeholder="这个目标为什么重要？"
-                />
-              </label>
-
-              <div className="grid gap-3 md:grid-cols-[1fr_220px]">
-                <label className="space-y-2">
-                  <span className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">截止日期</span>
-                  <input
-                    type="date"
-                    value={createForm.deadline ?? ''}
-                    onChange={(event) => setCreateForm((state) => ({ ...state, deadline: event.target.value }))}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-300"
-                  />
-                </label>
-                <div className="flex items-end gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="flex-1"
-                    onClick={() => setShowCreateForm(false)}
-                  >
-                    取消
-                  </Button>
-                  <Button
-                    type="button"
-                    className="flex-1"
-                    onClick={handleCreateGoal}
-                    disabled={isCreating || !createForm.title.trim()}
-                  >
-                    {isCreating ? '创建中' : '创建并查看'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        <TopSummaryBar
-          totalGoals={totalGoals}
-          activeGoals={activeGoals}
-          averageProgress={averageGoalProgress}
-          focusTitle={focusGoal?.title ?? '暂无目标'}
-          focusAction={focusView?.nextAction ?? '先添加一个目标。'}
-          focusStage={focusView?.currentStage ?? '等待目标'}
-          focusPriority={focusGoal?.priority ?? 'medium'}
-          focusProgress={focusGoal?.progress ?? 0}
-        />
-
-        <FilterBar
-          sortBy={sortBy}
-          showHighPriorityOnly={showHighPriorityOnly}
-          showNearDeadlineOnly={showNearDeadlineOnly}
-          onSortChange={setSortBy}
-          onToggleHighPriority={() => setShowHighPriorityOnly((value) => !value)}
-          onToggleNearDeadline={() => setShowNearDeadlineOnly((value) => !value)}
-          nearDeadlineCount={nearDeadlineCount}
-        />
-
-        <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-sm text-slate-500">
-              当前显示 {visibleGoals.length} 个目标，共 {goals.length} 个
-            </p>
-            <p className="text-sm font-medium text-slate-700">
-              先看 <span className="text-slate-950">{focusGoal?.title ?? '暂无目标'}</span>
-            </p>
-          </div>
-
-          {error && (
-            <Card className="border-amber-200 bg-amber-50/70">
-              <p className="text-sm text-amber-900">{error}</p>
-            </Card>
-          )}
-
-          {loading && goals.length === 0 ? (
-            <Card className="border-dashed border-slate-300 bg-white/80">
-              <p className="text-sm text-slate-500">正在加载目标...</p>
-            </Card>
-          ) : visibleGoals.length > 0 ? (
-            <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-              {visibleGoals.map((goal) => (
-                <GoalCard
-                  key={goal.id}
-                  goal={buildGoalCardView(goal)}
-                  selected={goal.id === focusGoal?.id}
-                  urgent={isUrgent(goal)}
-                  onClick={() => navigate(`/goals/${goal.id}`)}
-                />
-              ))}
-            </div>
-          ) : (
-            <Card className="border-dashed border-slate-300 bg-white/80">
-              <p className="text-sm text-slate-500">当前筛选条件下没有目标。</p>
-            </Card>
-          )}
-
-          {showNearDeadlineOnly && (
-            <p className="text-xs text-slate-400">
-              “临近截止”表示 7 天内到期。只有存在截止日期的目标才会被统计。
-            </p>
-          )}
-        </section>
+    <div className="flex min-h-[calc(100vh-64px)] w-full flex-col bg-white">
+      {/* Page header */}
+      <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-6 py-5 lg:px-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-950">目标</h1>
+        <button
+          type="button"
+          onClick={openCreate}
+          className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-teal-700"
+        >
+          <Plus className="h-4 w-4" />
+          新建目标
+        </button>
       </div>
-    </main>
+
+      {/* Toolbar: status tabs + search/sort */}
+      <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-3 sm:flex-row sm:items-center sm:justify-between lg:px-8">
+        <div className="flex gap-1">
+          {statusTabs.map((tab) => {
+            const active = tab.key === statusFilter
+            const count = counts[tab.key]
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setStatusFilter(tab.key)}
+                className={clsx(
+                  'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition',
+                  active
+                    ? 'bg-teal-50 text-teal-700'
+                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700',
+                )}
+              >
+                {tab.label}
+                <span className={clsx('text-xs', active ? 'text-teal-500' : 'text-slate-400')}>{count}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="flex gap-2">
+          <label className="flex h-9 min-w-[220px] items-center gap-2 rounded-md border border-slate-200 px-3 text-sm text-slate-500 focus-within:border-teal-300 focus-within:ring-2 focus-within:ring-teal-100">
+            <Search className="h-3.5 w-3.5 text-slate-400" />
+            <input
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              placeholder="搜索目标..."
+              className="w-full bg-transparent text-slate-700 outline-none placeholder:text-slate-400"
+            />
+          </label>
+          <label className="flex h-9 items-center gap-1.5 rounded-md border border-slate-200 px-2.5 text-sm text-slate-500">
+            <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              className="bg-transparent pr-4 text-slate-700 outline-none"
+            >
+              <option value="updated">最近更新</option>
+              <option value="deadline">截止日期</option>
+              <option value="progress">进度</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="border-b border-amber-200 bg-amber-50 px-6 py-3 text-sm text-amber-700 lg:px-8">{error}</div>
+      ) : null}
+
+      {/* Table */}
+      <div className="flex-1 overflow-x-auto">
+        <table className="min-w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 bg-slate-50/70 text-left text-xs uppercase tracking-wider text-slate-400">
+              <th className="px-6 py-3 font-semibold lg:px-8">目标名称</th>
+              <th className="px-4 py-3 font-semibold">状态</th>
+              <th className="px-4 py-3 font-semibold">进度</th>
+              <th className="px-4 py-3 font-semibold">截止日期</th>
+              <th className="px-4 py-3 font-semibold">更新时间</th>
+              <th className="w-[100px] px-4 py-3 font-semibold" />
+            </tr>
+          </thead>
+          <tbody>
+            {loading && goals.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-16 text-center text-sm text-slate-500 lg:px-8">正在加载目标...</td>
+              </tr>
+            ) : filteredGoals.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-16 text-center text-sm text-slate-500 lg:px-8">当前筛选条件下没有目标。</td>
+              </tr>
+            ) : (
+              filteredGoals.map((goal) => (
+                <tr
+                  key={goal.id}
+                  onClick={() => navigate(`/goals/${goal.id}`)}
+                  onMouseEnter={() => setHoveredRow(goal.id)}
+                  onMouseLeave={() => setHoveredRow(null)}
+                  className="cursor-pointer border-b border-slate-100 transition hover:bg-teal-50/40"
+                >
+                  <td className="px-6 py-3.5 align-top lg:px-8">
+                    <div className="min-w-[240px]">
+                      <p className="font-medium text-slate-900">{goal.title}</p>
+                      <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
+                        {goal.description || goal.outcome || '暂无说明'}
+                      </p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5 align-top">
+                    <Tag variant={statusTagVariant(goal.status)}>{labelGoalStatus(goal.status)}</Tag>
+                  </td>
+                  <td className="px-4 py-3.5 align-top">
+                    <div className="flex min-w-[120px] items-center gap-2">
+                      <ProgressBar value={goal.progress} className="flex-1" />
+                      <span className="text-xs text-slate-500">{goal.progress}%</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5 align-top text-slate-600">{formatDate(primaryDate(goal))}</td>
+                  <td className="px-4 py-3.5 align-top text-slate-500">{relativeTime(goal.updated_at)}</td>
+                  <td className="px-4 py-3.5 align-top">
+                    <div className={clsx('flex gap-1 transition', hoveredRow === goal.id ? 'opacity-100' : 'opacity-0')}>
+                      <button
+                        type="button"
+                        onClick={(e) => openEdit(goal, e)}
+                        className="rounded p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                        title="编辑"
+                      >
+                        <PencilLine className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDelete(goal, e)}
+                        className="rounded p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                        title="删除"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <GoalModal
+        open={modalOpen}
+        goal={editingGoal}
+        onClose={() => setModalOpen(false)}
+      />
+    </div>
   )
 }

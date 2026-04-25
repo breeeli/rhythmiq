@@ -98,7 +98,7 @@ export default function AgentPage() {
 
       <div className="space-y-6">
         {draftPlan ? (
-          <Card className="border-sky-100 bg-white/90 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+          <Card className="border-teal-100 bg-white/90 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
             <div className="space-y-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -158,13 +158,13 @@ export default function AgentPage() {
                         <input
                           value={goalTitle}
                           onChange={(e) => setGoalTitle(e.target.value)}
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-300"
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-teal-300"
                         />
                         <textarea
                           value={goalDescription}
                           onChange={(e) => setGoalDescription(e.target.value)}
                           rows={3}
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-300"
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-teal-300"
                         />
                         <div className="flex items-center gap-3">
                           <input
@@ -184,7 +184,6 @@ export default function AgentPage() {
                         <p className="text-sm leading-6 text-slate-600">{draftPlan.goal.description}</p>
                         <ProgressBar value={draftPlan.goal.progress} tone="primary" />
                         <div className="flex flex-wrap gap-2">
-                          <Tag variant="primary">{draftPlan.goal.type}</Tag>
                           <Tag variant={draftPlan.goal.priority === 'high' ? 'warning' : 'neutral'}>{draftPlan.goal.priority}</Tag>
                           <Tag variant="neutral">{draftPlan.goal.status}</Tag>
                         </div>
@@ -207,12 +206,12 @@ export default function AgentPage() {
                         value={planSteps.join('\n')}
                         onChange={(e) => setPlanSteps(e.target.value.split('\n'))}
                         rows={8}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-300"
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-teal-300"
                       />
                     ) : (
                       planSteps.map((step, index) => (
                         <div key={`${step}-${index}`} className="flex gap-3 rounded-2xl bg-white px-4 py-3">
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-xs font-semibold text-sky-700">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-100 text-xs font-semibold text-teal-700">
                             {index + 1}
                           </span>
                           <p className="text-sm leading-6 text-slate-700">{step}</p>
@@ -244,7 +243,7 @@ export default function AgentPage() {
                                     ),
                                   )
                                 }
-                                className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-sky-300"
+                                className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-300"
                               />
                               <select
                                 value={task.status}
@@ -301,7 +300,7 @@ export default function AgentPage() {
                                     ),
                                   )
                                 }
-                                className="rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-sky-300"
+                                className="rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-300"
                               />
                               <input
                                 value={item.start}
@@ -312,7 +311,7 @@ export default function AgentPage() {
                                     ),
                                   )
                                 }
-                                className="rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-sky-300"
+                                className="rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-300"
                               />
                               <input
                                 value={item.end}
@@ -323,7 +322,7 @@ export default function AgentPage() {
                                     ),
                                   )
                                 }
-                                className="rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-sky-300"
+                                className="rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-300"
                               />
                             </div>
                           </div>

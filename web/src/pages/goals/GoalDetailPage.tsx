@@ -1,305 +1,432 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import clsx from 'clsx'
+import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, PencilLine, Trash2 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CalendarDays, CheckCircle2, Clock3, Sparkles, Target, TriangleAlert } from 'lucide-react'
-import { Badge } from '@/components/ui/Badge'
+import { taskApi, type CreateTaskPayload, type UpdateTaskPayload } from '@/api'
+import { GoalModal } from '@/components/goals/GoalModal'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
 import { ProgressBar } from '@/components/ui/ProgressBar'
-import { SectionBlock } from '@/components/ui/SectionBlock'
 import { Tag } from '@/components/ui/Tag'
-import { labelGoalStatus, labelGoalType, labelPriority } from '@/lib/display'
-import { buildGoalDetailView } from '@/lib/goalPresentation'
+import { labelGoalStatus, labelPriority, labelTaskStatus } from '@/lib/display'
 import { useGoalStore, useUserStore } from '@/store'
+import type { Goal, Task, TaskStatus } from '@/types'
 
-function formatDeadline(value?: string) {
-  if (!value) return '暂无截止日期'
+const taskStatuses: TaskStatus[] = ['todo', 'in_progress', 'done', 'skipped']
+
+function toDateValue(value?: string) {
+  if (!value) return ''
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' })
+  if (Number.isNaN(date.getTime())) return value.slice(0, 10)
+  return date.toISOString().slice(0, 10)
 }
 
-function StatCard({
-  title,
-  value,
-  hint,
-  icon,
-}: {
-  title: string
-  value: string
-  hint: string
-  icon: React.ReactNode
-}) {
-  return (
-    <Card className="border-slate-200 bg-white/90">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-[0.22em] text-slate-400">{title}</p>
-          <p className="mt-3 text-2xl font-semibold text-slate-950">{value}</p>
-          <p className="mt-2 text-sm leading-6 text-slate-500">{hint}</p>
-        </div>
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-50 text-slate-500">
-          {icon}
-        </div>
-      </div>
-    </Card>
-  )
+function formatDate(value?: string) {
+  return toDateValue(value) || '未设置'
+}
+
+function primaryDate(goal: Goal) {
+  return goal.target_date || goal.deadline || goal.review_date
+}
+
+function statusTagVariant(status: Goal['status']) {
+  if (status === 'active') return 'primary' as const
+  if (status === 'completed') return 'success' as const
+  if (status === 'draft') return 'warning' as const
+  if (status === 'abandoned') return 'danger' as const
+  return 'neutral' as const
+}
+
+function taskStatusColor(status: TaskStatus) {
+  if (status === 'done') return 'border-emerald-200 text-emerald-700'
+  if (status === 'in_progress') return 'border-teal-200 text-teal-700'
+  if (status === 'skipped') return 'border-slate-200 text-slate-500'
+  return 'border-amber-200 text-amber-700'
 }
 
 export default function GoalDetailPage() {
   const navigate = useNavigate()
   const { goalId } = useParams()
-  const currentUser = useUserStore((state) => state.currentUser)
-  const goals = useGoalStore((state) => state.goals)
-  const loading = useGoalStore((state) => state.loading)
-  const error = useGoalStore((state) => state.error)
-  const fetchGoalById = useGoalStore((state) => state.fetchGoalById)
-  const updateGoal = useGoalStore((state) => state.updateGoal)
-  const requestedGoalIdRef = useRef<number | null>(null)
+  const currentUser = useUserStore((s) => s.currentUser)
+  const goals = useGoalStore((s) => s.goals)
+  const loading = useGoalStore((s) => s.loading)
+  const error = useGoalStore((s) => s.error)
+  const fetchGoals = useGoalStore((s) => s.fetchGoals)
+  const fetchGoalById = useGoalStore((s) => s.fetchGoalById)
+  const deleteGoal = useGoalStore((s) => s.deleteGoal)
+  const requestedRef = useRef<number | null>(null)
+  const fetchedUserRef = useRef<number | null>(null)
 
   const numericGoalId = Number(goalId)
-  const goal = goals.find((item) => item.id === numericGoalId)
+  const goal = goals.find((g) => g.id === numericGoalId)
+
+  const [newTaskTitle, setNewTaskTitle] = useState('')
+  const [savingTask, setSavingTask] = useState(false)
+  const [taskError, setTaskError] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [criteriaOpen, setCriteriaOpen] = useState(false)
+  const [childGoalsOpen, setChildGoalsOpen] = useState(false)
+
+  useEffect(() => {
+    if (!currentUser || fetchedUserRef.current === currentUser.id) return
+    fetchedUserRef.current = currentUser.id
+    fetchGoals(currentUser.id).catch(() => undefined)
+  }, [currentUser, fetchGoals])
 
   useEffect(() => {
     if (!currentUser || !Number.isFinite(numericGoalId)) return
-    if (goal || requestedGoalIdRef.current === numericGoalId) return
-    requestedGoalIdRef.current = numericGoalId
+    if (goal || requestedRef.current === numericGoalId) return
+    requestedRef.current = numericGoalId
     fetchGoalById(numericGoalId).catch(() => undefined)
   }, [currentUser, fetchGoalById, goal, numericGoalId])
 
-  const detail = useMemo(() => (goal ? buildGoalDetailView(goal) : null), [goal])
+  const tasks = useMemo(() => {
+    return [...(goal?.tasks ?? [])].sort((a, b) => {
+      if (a.sequence !== b.sequence) return a.sequence - b.sequence
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    })
+  }, [goal?.tasks])
 
-  const urgencyText = useMemo(() => {
-    if (!goal) return '暂无目标'
-    if (goal.status === 'completed') return '已完成'
-    if (goal.priority === 'high' && goal.progress < 45) return '需要优先处理'
-    if (goal.priority === 'high') return '高优先级'
-    if (goal.progress >= 80) return '接近完成'
-    return '正常推进'
-  }, [goal])
+  const taskStats = useMemo(() => {
+    const done = tasks.filter((t) => t.status === 'done').length
+    return { total: tasks.length, done }
+  }, [tasks])
+
+  const childGoals = useMemo(
+    () => goals.filter((g) => g.parent_goal_id === goal?.id),
+    [goals, goal?.id],
+  )
+
+  const parentGoal = useMemo(
+    () => (goal?.parent_goal_id ? goals.find((g) => g.id === goal.parent_goal_id) : undefined),
+    [goals, goal?.parent_goal_id],
+  )
+
+  const criteria = useMemo(
+    () => (goal?.success_criteria ?? []).map((s) => s.trim()).filter(Boolean),
+    [goal?.success_criteria],
+  )
 
   if (!Number.isFinite(numericGoalId)) {
     return (
-      <div className="p-6 lg:p-8">
-        <Card>
-          <p className="text-sm text-slate-500">这个目标编号无效。</p>
-          <Button className="mt-4" onClick={() => navigate('/goals')}>
-            返回总览
-          </Button>
-        </Card>
+      <div className="flex min-h-[calc(100vh-64px)] w-full items-center justify-center bg-white">
+        <p className="text-sm text-slate-500">目标编号无效。</p>
       </div>
     )
   }
 
   if (!goal) {
     return (
-      <div className="p-6 lg:p-8">
-        <Card>
-          <p className="text-sm text-slate-500">{loading ? '正在加载目标详情...' : '没有找到这个目标。'}</p>
-          {error && <p className="mt-2 text-sm text-amber-700">{error}</p>}
-          <Button className="mt-4" onClick={() => navigate('/goals')}>
-            返回总览
-          </Button>
-        </Card>
+      <div className="flex min-h-[calc(100vh-64px)] w-full items-center justify-center bg-white">
+        <div className="text-center text-sm text-slate-500">
+          {loading ? '正在加载目标...' : '没有找到这个目标。'}
+          {error ? <p className="mt-2 text-amber-700">{error}</p> : null}
+        </div>
       </div>
     )
   }
 
-  if (!detail) return null
+  const refreshGoal = () => fetchGoalById(goal.id)
+
+  const addTask = async () => {
+    if (!currentUser || !newTaskTitle.trim()) return
+    setTaskError(null)
+    setSavingTask(true)
+    try {
+      await taskApi.create(currentUser.id, {
+        title: newTaskTitle.trim(),
+        goal_id: goal.id,
+        sequence: tasks.length + 1,
+        estimated_minutes: 30,
+      } satisfies CreateTaskPayload)
+      setNewTaskTitle('')
+      await refreshGoal()
+    } catch (e) {
+      setTaskError(e instanceof Error ? e.message : '创建任务失败')
+    } finally {
+      setSavingTask(false)
+    }
+  }
+
+  const updateTask = async (task: Task, data: UpdateTaskPayload) => {
+    setTaskError(null)
+    try {
+      await taskApi.update(task.id, data)
+      await refreshGoal()
+    } catch (e) {
+      setTaskError(e instanceof Error ? e.message : '更新任务失败')
+    }
+  }
+
+  const deleteTask = async (task: Task) => {
+    if (!window.confirm(`删除任务「${task.title}」？`)) return
+    setTaskError(null)
+    try {
+      await taskApi.delete(task.id)
+      await refreshGoal()
+    } catch (e) {
+      setTaskError(e instanceof Error ? e.message : '删除任务失败')
+    }
+  }
+
+  const removeGoal = async () => {
+    if (!window.confirm(`删除目标「${goal.title}」？`)) return
+    await deleteGoal(goal.id)
+    navigate('/goals')
+  }
+
+  const isCurrentTask = (task: Task) =>
+    task.status === 'in_progress' || (task.status === 'todo' && tasks.find((t) => t.status === 'in_progress' || t.status === 'todo')?.id === task.id)
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#f5f7fb_100%)]">
-      <div className="mx-auto max-w-7xl space-y-6 px-6 py-6 lg:px-8 lg:py-8">
-        <div className="flex items-center justify-between gap-3">
-          <Button type="button" variant="secondary" onClick={() => navigate('/goals')}>
-            <ArrowLeft className="h-4 w-4" />
-            返回总览
+    <div className="flex min-h-[calc(100vh-64px)] w-full flex-col bg-white">
+      {/* Breadcrumb + actions */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-6 py-4 lg:px-8">
+        <div className="flex items-center gap-2 text-sm text-slate-400">
+          <button
+            type="button"
+            onClick={() => navigate('/goals')}
+            className="inline-flex items-center gap-1.5 text-slate-500 transition hover:text-slate-900"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            目标
+          </button>
+          {parentGoal ? (
+            <>
+              <span>/</span>
+              <button
+                type="button"
+                onClick={() => navigate(`/goals/${parentGoal.id}`)}
+                className="text-slate-500 transition hover:text-slate-900"
+              >
+                {parentGoal.title}
+              </button>
+            </>
+          ) : null}
+          <span>/</span>
+          <span className="text-slate-700">{goal.title}</span>
+        </div>
+
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setModalOpen(true)}>
+            <PencilLine className="h-4 w-4" />
+            编辑
           </Button>
-          <Badge variant={goal.priority === 'high' ? 'warning' : goal.priority === 'medium' ? 'primary' : 'default'}>
-            {urgencyText}
-          </Badge>
-        </div>
-
-        <Card className="border-0 bg-[linear-gradient(135deg,#eff8ff_0%,#ffffff_48%,#f7fbff_100%)] shadow-[0_22px_70px_rgba(15,23,42,0.08)]">
-          <div className="grid gap-6 p-6 xl:grid-cols-[1.18fr_0.82fr] xl:p-8">
-            <div className="space-y-5">
-              <div className="flex flex-wrap items-center gap-2">
-                <Tag variant={goal.priority === 'high' ? 'warning' : goal.priority === 'medium' ? 'primary' : 'neutral'}>
-                  {labelPriority(goal.priority)}优先级
-                </Tag>
-                <Tag variant="neutral">{labelGoalType(goal.type)}</Tag>
-                <Tag variant="neutral">{labelGoalStatus(goal.status)}</Tag>
-                {goal.tasks?.length ? <Badge variant="info">{goal.tasks.length} 个任务</Badge> : null}
-              </div>
-
-              <div className="space-y-3">
-                <input
-                  value={goal.title}
-                  onChange={(event) => updateGoal(goal.id, { title: event.target.value })}
-                  className="w-full rounded-[1.75rem] border border-white/60 bg-white/90 px-5 py-4 text-3xl font-semibold text-slate-900 outline-none shadow-sm transition focus:border-sky-300"
-                />
-                <textarea
-                  value={goal.description ?? ''}
-                  onChange={(event) => updateGoal(goal.id, { description: event.target.value })}
-                  rows={3}
-                  className="w-full rounded-[1.75rem] border border-white/60 bg-white/90 px-5 py-4 text-sm leading-7 text-slate-600 outline-none shadow-sm transition focus:border-sky-300"
-                  placeholder="补充这个目标为什么重要"
-                />
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                <label className="space-y-2">
-                  <span className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">优先级</span>
-                  <select
-                    value={goal.priority}
-                    onChange={(event) => updateGoal(goal.id, { priority: event.target.value as typeof goal.priority })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none"
-                  >
-                    <option value="high">高优先级</option>
-                    <option value="medium">中优先级</option>
-                    <option value="low">低优先级</option>
-                  </select>
-                </label>
-                <label className="space-y-2">
-                  <span className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">截止日期</span>
-                  <input
-                    type="date"
-                    value={goal.deadline ?? ''}
-                    onChange={(event) => updateGoal(goal.id, { deadline: event.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none"
-                  />
-                </label>
-                <div className="space-y-2 sm:col-span-2 xl:col-span-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-700">进度</span>
-                    <span className="font-semibold text-slate-900">{goal.progress}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={goal.progress}
-                    onChange={(event) => updateGoal(goal.id, { progress: Number(event.target.value) })}
-                    className="w-full accent-sky-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <StatCard
-                title="目标进度"
-                value={`${goal.progress}%`}
-                hint="目标当前完成情况"
-                icon={<Target className="h-5 w-5" />}
-              />
-              <StatCard
-                title="当前阶段"
-                value={detail.currentStage}
-                hint="系统根据进度自动判断"
-                icon={<Sparkles className="h-5 w-5" />}
-              />
-              <StatCard
-                title="截止日期"
-                value={formatDeadline(goal.deadline)}
-                hint="有截止日期时，系统会优先提醒"
-                icon={<CalendarDays className="h-5 w-5" />}
-              />
-              <StatCard
-                title="任务数量"
-                value={String(detail.taskCount)}
-                hint="后端返回的关联任务数"
-                icon={<Clock3 className="h-5 w-5" />}
-              />
-            </div>
-          </div>
-        </Card>
-
-        <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-          <SectionBlock
-            title="下一步行动"
-            description="目标详情页最重要的部分，打开后应该能立刻开始做。"
-            action={<Badge variant="primary">1 个行动</Badge>}
-          >
-            <Card className="border-sky-100 bg-white/95">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-sky-500" />
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-500">下一步行动</p>
-                </div>
-                <p className="text-xl font-semibold leading-8 text-slate-950">{detail.nextAction}</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button">现在开始</Button>
-                  <Button type="button" variant="secondary">
-                    稍后提醒
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </SectionBlock>
-
-          <SectionBlock
-            title="执行拆解"
-            description="不是任务清单，而是把目标拆成更容易开始的动作。"
-            action={<Badge variant="default">{detail.steps.length} 步</Badge>}
-          >
-            <div className="space-y-3">
-              {detail.steps.map((step, index) => (
-                <Card key={step} className="border-slate-200 bg-white/90">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-semibold text-sky-700">
-                      {index + 1}
-                    </div>
-                    <p className="text-sm leading-7 text-slate-700">{step}</p>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </SectionBlock>
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-[1fr_1fr_1fr]">
-          <SectionBlock title="可能阻塞点" description="提前看到问题，才能减少拖延。">
-            <Card className="border-amber-100 bg-amber-50/60">
-              <div className="space-y-3">
-                {detail.blockers.map((blocker) => (
-                  <div key={blocker} className="flex items-start gap-2">
-                    <TriangleAlert className="mt-0.5 h-4 w-4 text-amber-600" />
-                    <p className="text-sm leading-7 text-amber-900">{blocker}</p>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </SectionBlock>
-
-          <SectionBlock title="排期建议" description="让目标有具体的落点，而不是停留在想法里。">
-            <Card className="border-slate-200 bg-white/90">
-              <div className="space-y-3">
-                {detail.scheduleHints.map((hint) => (
-                  <div key={hint} className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-                    <p className="text-sm leading-7 text-slate-700">{hint}</p>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </SectionBlock>
-
-          <SectionBlock title="当前状态" description="把这个目标放到更明确的决策上下文里。">
-            <Card className="border-slate-200 bg-white/90">
-              <div className="space-y-3">
-                <ProgressBar value={goal.progress} tone={goal.progress > 70 ? 'success' : 'primary'} label="目标进度" />
-                <p className="text-sm leading-7 text-slate-600">
-                  {goal.priority === 'high'
-                    ? '这个目标应该优先获得时间和注意力。'
-                    : goal.priority === 'medium'
-                      ? '这个目标需要稳定推进，但可以和其他事项并行。'
-                      : '这个目标可以保持推进，不必占据最优先的位置。'}
-                </p>
-              </div>
-            </Card>
-          </SectionBlock>
+          <Button variant="danger" onClick={removeGoal}>
+            <Trash2 className="h-4 w-4" />
+            删除
+          </Button>
         </div>
       </div>
-    </main>
+
+      <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-6 lg:px-8">
+        {/* Header: tags + title + description + progress */}
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Tag variant={statusTagVariant(goal.status)}>{labelGoalStatus(goal.status)}</Tag>
+            <Tag variant={goal.priority === 'high' ? 'warning' : 'neutral'}>{labelPriority(goal.priority)}优先级</Tag>
+            <span className="text-sm text-slate-400">截止 {formatDate(primaryDate(goal))}</span>
+          </div>
+
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-950">{goal.title}</h1>
+
+          {goal.description || goal.outcome ? (
+            <p className="max-w-3xl text-sm leading-7 text-slate-600">
+              {goal.description || goal.outcome}
+            </p>
+          ) : null}
+
+          <div className="flex items-center gap-3">
+            <ProgressBar value={goal.progress} className="max-w-md flex-1" />
+            <span className="text-sm font-medium text-slate-700">{goal.progress}%</span>
+            <span className="text-sm text-slate-400">
+              {taskStats.done}/{taskStats.total} 任务完成
+            </span>
+          </div>
+        </div>
+
+        {/* Task table */}
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-slate-950">任务</h2>
+
+          {taskError ? (
+            <div className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">{taskError}</div>
+          ) : null}
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="min-w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-left text-xs uppercase tracking-wider text-slate-400">
+                  <th className="px-4 py-3 font-semibold">标题</th>
+                  <th className="w-[120px] px-4 py-3 font-semibold">状态</th>
+                  <th className="w-[90px] px-4 py-3 font-semibold">预计</th>
+                  <th className="w-[100px] px-4 py-3 font-semibold">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tasks.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-10 text-center text-sm text-slate-500">
+                      还没有任务，在下方添加第一个。
+                    </td>
+                  </tr>
+                ) : (
+                  tasks.map((task) => {
+                    const highlight = isCurrentTask(task) && task.status !== 'done' && task.status !== 'skipped'
+                    return (
+                      <tr
+                        key={task.id}
+                        className={clsx(
+                          'border-b border-slate-100',
+                          highlight && 'bg-teal-50/50',
+                        )}
+                      >
+                        <td className="px-4 py-3 align-top">
+                          <p className={clsx('font-medium', task.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-900')}>
+                            {task.title}
+                          </p>
+                          {task.description ? (
+                            <p className="mt-0.5 text-xs text-slate-500">{task.description}</p>
+                          ) : null}
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <select
+                            value={task.status}
+                            onChange={(e) => updateTask(task, { status: e.target.value as TaskStatus })}
+                            className={clsx(
+                              'rounded-md border bg-white px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-teal-100',
+                              taskStatusColor(task.status),
+                            )}
+                          >
+                            {taskStatuses.map((s) => (
+                              <option key={s} value={s}>{labelTaskStatus(s)}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-3 align-top text-slate-500">
+                          {task.estimated_minutes}min
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <div className="flex gap-1">
+                            {task.status !== 'done' ? (
+                              <button
+                                type="button"
+                                onClick={() => updateTask(task, { status: 'done' })}
+                                className="rounded p-1 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600"
+                                title="完成"
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => deleteTask(task)}
+                              className="rounded p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                              title="删除"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+
+                {/* Inline add row */}
+                <tr className="border-b border-slate-100">
+                  <td colSpan={4} className="px-4 py-2.5">
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        addTask()
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <span className="text-sm text-slate-400">+</span>
+                      <input
+                        value={newTaskTitle}
+                        onChange={(e) => setNewTaskTitle(e.target.value)}
+                        placeholder="添加任务..."
+                        className="min-w-0 flex-1 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+                        disabled={savingTask}
+                      />
+                      {newTaskTitle.trim() ? (
+                        <button
+                          type="submit"
+                          disabled={savingTask}
+                          className="text-xs font-medium text-teal-600 hover:text-teal-700"
+                        >
+                          {savingTask ? '添加中...' : '回车添加'}
+                        </button>
+                      ) : null}
+                    </form>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Collapsible sections */}
+        <div className="mt-8 space-y-1">
+          <button
+            type="button"
+            onClick={() => setCriteriaOpen((o) => !o)}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          >
+            {criteriaOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            成功标准 ({criteria.length})
+          </button>
+          {criteriaOpen ? (
+            <div className="space-y-2 pb-2 pl-8">
+              {criteria.length > 0 ? (
+                criteria.map((c, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 text-teal-500" />
+                    <span>{c}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-slate-400">暂无成功标准。</p>
+              )}
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => setChildGoalsOpen((o) => !o)}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          >
+            {childGoalsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            子目标 ({childGoals.length})
+          </button>
+          {childGoalsOpen ? (
+            <div className="space-y-1 pb-2 pl-8">
+              {childGoals.length > 0 ? (
+                childGoals.map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => navigate(`/goals/${g.id}`)}
+                    className="block w-full rounded px-2 py-1.5 text-left text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                  >
+                    {g.title}
+                  </button>
+                ))
+              ) : (
+                <p className="text-sm text-slate-400">暂无子目标。</p>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <GoalModal
+        open={modalOpen}
+        goal={goal}
+        onClose={() => setModalOpen(false)}
+        onSaved={() => refreshGoal()}
+      />
+    </div>
   )
 }

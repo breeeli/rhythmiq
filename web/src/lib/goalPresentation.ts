@@ -27,6 +27,8 @@ function formatTaskTitle(title: string) {
 export function getGoalCurrentStage(goal: Goal) {
   if (goal.status === 'completed' || goal.progress >= 100) return '已完成'
   if (goal.status === 'archived') return '已归档'
+  if (goal.status === 'abandoned') return '已废弃'
+  if (goal.status === 'draft') return '草稿待确认'
   if (goal.progress >= 80) return '收尾阶段'
   if (goal.progress >= 50) return '稳定推进'
   if (goal.progress >= 20) return '正在建立节奏'
@@ -74,7 +76,7 @@ export function getGoalBlockers(goal: Goal) {
     blockers.push('当前还处在启动阶段，容易被其他事情打断。')
   }
 
-  if (goal.deadline) {
+  if (goal.target_date || goal.deadline) {
     blockers.push('需要注意截止时间，避免把关键动作留到最后。')
   } else {
     blockers.push('没有明确截止日期时，推进节奏容易变慢。')

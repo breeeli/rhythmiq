@@ -70,11 +70,11 @@ export function TopSummaryBar({
           icon={<Clock3 className="h-5 w-5" />}
         />
 
-        <Card className="border-sky-200 bg-[linear-gradient(135deg,rgba(14,165,233,0.08),rgba(255,255,255,0.96))] shadow-[0_16px_40px_rgba(14,165,233,0.12)]">
+        <Card className="border-teal-200 bg-[linear-gradient(135deg,rgba(20,184,166,0.08),rgba(255,255,255,0.96))] shadow-[0_16px_40px_rgba(20,184,166,0.12)]">
           <div className="flex h-full flex-col justify-between gap-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.24em] text-sky-500">今日聚焦</p>
+                <p className="text-xs uppercase tracking-[0.24em] text-teal-500">今日聚焦</p>
                 <h3 className="mt-3 text-2xl font-semibold text-slate-950">{focusTitle}</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600">{focusStage}</p>
               </div>
@@ -84,16 +84,16 @@ export function TopSummaryBar({
             </div>
 
             <div className="space-y-3">
-              <div className="rounded-2xl border border-sky-100 bg-white/90 px-4 py-3 shadow-sm">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-500">下一步行动</p>
+              <div className="rounded-2xl border border-teal-100 bg-white/90 px-4 py-3 shadow-sm">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-teal-500">下一步行动</p>
                 <p className="mt-2 text-base font-semibold leading-7 text-slate-950">{focusAction}</p>
               </div>
               <ProgressBar value={focusProgress} tone={focusProgress > 70 ? 'success' : 'primary'} label="聚焦进度" />
             </div>
 
-            <div className="flex items-center justify-between rounded-2xl border border-sky-100 bg-white/80 px-4 py-3 text-sm text-slate-600">
+            <div className="flex items-center justify-between rounded-2xl border border-teal-100 bg-white/80 px-4 py-3 text-sm text-slate-600">
               <span>系统自动挑选，减少决策时间</span>
-              <ArrowUpRight className="h-4 w-4 text-sky-500" />
+              <ArrowUpRight className="h-4 w-4 text-teal-500" />
             </div>
           </div>
         </Card>

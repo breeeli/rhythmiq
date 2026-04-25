@@ -33,7 +33,7 @@ export function GoalCard({ goal, selected = false, urgent = false, onClick }: Go
       <Card
         className={clsx(
           'group h-full border-slate-200/80 bg-white/95 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(15,23,42,0.09)]',
-          selected && 'ring-2 ring-sky-300 shadow-[0_20px_40px_rgba(14,165,233,0.12)]',
+          selected && 'ring-2 ring-teal-300 shadow-[0_20px_40px_rgba(20,184,166,0.12)]',
           urgent && 'border-amber-200 bg-[linear-gradient(180deg,rgba(255,251,235,0.92),rgba(255,255,255,0.98))]',
         )}
       >
@@ -79,13 +79,13 @@ export function GoalCard({ goal, selected = false, urgent = false, onClick }: Go
             </div>
           </header>
 
-          <div className="rounded-[1.1rem] border border-sky-100 bg-[linear-gradient(135deg,rgba(14,165,233,0.08),rgba(255,255,255,0.98))] p-4 shadow-sm">
+          <div className="rounded-[1.1rem] border border-teal-100 bg-[linear-gradient(135deg,rgba(20,184,166,0.08),rgba(255,255,255,0.98))] p-4 shadow-sm">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-sky-500" />
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-500">下一步行动</p>
+              <Sparkles className="h-4 w-4 text-teal-500" />
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-500">下一步行动</p>
             </div>
             <p className="mt-3 text-base font-semibold leading-7 text-slate-950">{goal.nextAction}</p>
-            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white">
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-teal-600 px-4 py-2 text-sm font-semibold text-white">
               现在就做
               <ArrowRight className="h-4 w-4" />
             </div>

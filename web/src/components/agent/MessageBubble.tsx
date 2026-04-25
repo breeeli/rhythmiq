@@ -15,7 +15,7 @@ function TextBubble({ text, role }: { text: string; role: 'user' | 'assistant' }
       className={clsx(
         'max-w-[82%]',
         role === 'user'
-          ? 'ml-auto border-sky-200 bg-sky-600 text-white shadow-[0_16px_40px_rgba(2,132,199,0.22)]'
+          ? 'ml-auto border-teal-200 bg-teal-600 text-white shadow-[0_16px_40px_rgba(13,148,136,0.22)]'
           : 'border-slate-200 bg-white text-slate-900',
       )}
     >
@@ -39,7 +39,7 @@ function PlanSection({
     <details className="group rounded-3xl border border-slate-200 bg-white p-4" open={defaultOpen}>
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-sky-600" />
+          <Icon className="h-4 w-4 text-teal-600" />
           <span className="text-sm font-semibold text-slate-900">{title}</span>
         </div>
         <ChevronDown className="h-4 w-4 text-slate-400 transition group-open:rotate-180" />
@@ -55,7 +55,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   }
 
   return (
-    <Card className="border-sky-100 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+    <Card className="border-teal-100 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
       <div className="space-y-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -69,7 +69,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             <h3 className="mt-3 text-xl font-semibold text-slate-900">{message.content.title}</h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">{message.content.summary}</p>
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
             <Target className="h-6 w-6" />
           </div>
         </div>
@@ -82,7 +82,6 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             </div>
             <ProgressBar value={message.content.goal.progress} tone="primary" label="Goal progress" />
             <div className="flex flex-wrap gap-2">
-              <Tag variant="primary">{message.content.goal.type}</Tag>
               <Tag variant={message.content.goal.priority === 'high' ? 'warning' : 'neutral'}>
                 {message.content.goal.priority}
               </Tag>
@@ -97,7 +96,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           <ol className="space-y-2">
             {message.content.plan.map((step, index) => (
               <li key={`${step}-${index}`} className="flex gap-3 rounded-2xl bg-slate-50 px-4 py-3">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-xs font-semibold text-sky-700">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-100 text-xs font-semibold text-teal-700">
                   {index + 1}
                 </span>
                 <p className="text-sm leading-6 text-slate-700">{step}</p>

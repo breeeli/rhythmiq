@@ -11,7 +11,7 @@ interface ProgressBarProps {
 }
 
 const tones: Record<ProgressTone, string> = {
-  primary: 'bg-sky-500',
+  primary: 'bg-teal-500',
   success: 'bg-emerald-500',
   warning: 'bg-amber-500',
   neutral: 'bg-slate-400',

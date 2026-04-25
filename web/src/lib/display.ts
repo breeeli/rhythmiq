@@ -1,7 +1,6 @@
 import type {
   GoalPriority,
   GoalStatus,
-  GoalType,
   HabitTimePreference,
   PlanStatus,
   ScheduleRuleKind,
@@ -21,9 +20,11 @@ const weekdayLabels: Record<string, string> = {
 }
 
 const goalStatusLabels: Record<GoalStatus, string> = {
+  draft: '草稿',
   active: '进行中',
   completed: '已完成',
   archived: '已归档',
+  abandoned: '已废弃',
 }
 
 const taskStatusLabels: Record<TaskStatus, string> = {
@@ -37,11 +38,6 @@ const priorityLabels: Record<GoalPriority | TaskPriority, string> = {
   high: '高',
   medium: '中',
   low: '低',
-}
-
-const goalTypeLabels: Record<GoalType, string> = {
-  short_term: '短期',
-  long_term: '长期',
 }
 
 const planStatusLabels: Record<PlanStatus, string> = {
@@ -93,10 +89,6 @@ export function labelTaskStatus(status: TaskStatus) {
 
 export function labelPriority(priority: GoalPriority | TaskPriority) {
   return priorityLabels[priority]
-}
-
-export function labelGoalType(type: GoalType) {
-  return goalTypeLabels[type]
 }
 
 export function labelPlanStatus(status: PlanStatus) {

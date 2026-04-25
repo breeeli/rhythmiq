@@ -16,7 +16,7 @@ export function PlanList({ items }: PlanListProps) {
         <ol className="space-y-3">
           {items.map((item, index) => (
             <li key={item} className="flex gap-3 rounded-2xl bg-slate-50 px-4 py-3">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-xs font-semibold text-sky-700">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-100 text-xs font-semibold text-teal-700">
                 {index + 1}
               </span>
               <p className="text-sm leading-6 text-slate-700">{item}</p>

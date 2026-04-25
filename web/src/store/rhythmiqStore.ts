@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Goal, GoalPriority, GoalType, Subtask, Task, TaskStatus } from '@/types'
+import type { Goal, GoalPriority, Task, TaskStatus } from '@/types'
 
 export interface Habit {
   id: number
@@ -25,7 +25,6 @@ export interface ScheduleItem {
 
 type GoalDraft = Partial<Goal> & Pick<Goal, 'title'>
 type TaskDraft = Partial<Task> & Pick<Task, 'title'>
-type SubtaskDraft = Partial<Subtask> & Pick<Subtask, 'title'>
 type ScheduleDraft = Omit<ScheduleItem, 'id'>
 
 export interface AgentPlan {
@@ -72,27 +71,15 @@ function makeGoal(overrides: Partial<Goal> & Pick<Goal, 'id' | 'title'>): Goal {
     created_at: nowIso(),
     updated_at: nowIso(),
     user_id: 1,
+    parent_goal_id: undefined,
     description: '',
-    type: 'short_term',
     status: 'active',
+    source: 'manual',
     priority: 'medium',
+    outcome: '',
+    success_criteria: [],
+    motivation: '',
     progress: 0,
-    ...overrides,
-  }
-}
-
-function makeSubtask(overrides: Partial<Subtask> & Pick<Subtask, 'id' | 'task_id' | 'title'>): Subtask {
-  return {
-    created_at: nowIso(),
-    updated_at: nowIso(),
-    description: '',
-    status: 'todo',
-    priority: 'medium',
-    estimated_minutes: 15,
-    actual_minutes: 0,
-    prefer_window: 'any',
-    sequence: 1,
-    llm_generated: false,
     ...overrides,
   }
 }
@@ -103,12 +90,14 @@ function makeTask(overrides: Partial<Task> & Pick<Task, 'id' | 'title' | 'goal_i
     updated_at: nowIso(),
     user_id: 1,
     description: '',
+    expected_output: '',
     status: 'todo',
     priority: 'medium',
     estimated_minutes: 30,
     actual_minutes: 0,
     prefer_morning: false,
     needs_focus: false,
+    sequence: 1,
     tags: '',
     ...overrides,
   }
@@ -154,20 +143,17 @@ function buildPlan(prompt: string, modifier: 'draft' | 'refine' | 'fresh' = 'dra
           title: '建立稳定运动节奏',
           description: '把运动、恢复和日常节奏整合到一个更稳定的系统里。',
           priority: 'high' as GoalPriority,
-          type: 'short_term' as GoalType,
         }
       : text.includes('学习')
         ? {
             title: '推进学习与输出系统',
             description: '围绕学习、复盘和输出建立可持续节奏。',
             priority: 'medium' as GoalPriority,
-            type: 'short_term' as GoalType,
           }
         : {
             title: '推进核心目标系统',
             description: '把目标拆成可执行的任务与日程安排。',
             priority: 'medium' as GoalPriority,
-            type: 'short_term' as GoalType,
           }
 
   const goalId = modifier === 'fresh' ? 3000 + Math.floor(Math.random() * 1000) : 2001
@@ -181,11 +167,13 @@ function buildPlan(prompt: string, modifier: 'draft' | 'refine' | 'fresh' = 'dra
     id: goalId,
     title: modifier === 'refine' ? `${theme.title}（优化版）` : theme.title,
     description: theme.description,
-    type: theme.type,
+    outcome: theme.description,
+    success_criteria: ['目标定义清楚', '行动项可以执行', '每周有回看点'],
     priority: theme.priority,
     status: 'active',
     progress: modifier === 'refine' ? 42 : 35,
-    deadline: scheduleWeek[6].toISOString().slice(0, 10),
+    start_date: scheduleWeek[0].toISOString().slice(0, 10),
+    target_date: scheduleWeek[6].toISOString().slice(0, 10),
   })
 
   const tasks = taskSeed.map((label, index) =>
@@ -194,10 +182,12 @@ function buildPlan(prompt: string, modifier: 'draft' | 'refine' | 'fresh' = 'dra
       goal_id: goalId,
       title: label,
       description: modifier === 'refine' ? '调整为更低阻力的执行方式。' : '自动生成的执行步骤。',
+      expected_output: `${label}的可检查结果`,
       priority: index === 0 ? 'high' : index === 1 ? 'medium' : 'low',
       estimated_minutes: 20 + index * 15,
       prefer_morning: index < 2,
       status: index === 0 ? 'in_progress' : 'todo',
+      sequence: index + 1,
       tags: index === 0 ? 'agent' : 'sprint',
     }),
   )
@@ -212,23 +202,19 @@ function buildPlan(prompt: string, modifier: 'draft' | 'refine' | 'fresh' = 'dra
   const schedule: ScheduleItem[] = scheduleWeek.slice(1, 6).map((date, index) => ({
     id: goalId * 100 + index,
     day: getWeekdayLabel(date),
-    start: `${8 + index}:30`,
-    end: `${9 + index}:30`,
+    date: date.toISOString().slice(0, 10),
+    start: index < 2 ? '09:30' : '20:30',
+    end: index < 2 ? '10:15' : '21:15',
     title: tasks[index % tasks.length].title,
-    kind: index === 1 ? 'habit' : index === 3 ? 'routine' : 'task',
+    kind: 'task',
     goalId,
     taskId: tasks[index % tasks.length].id,
-    note: index === 1 ? '稳定习惯窗口' : '节奏块',
+    note: 'Agent draft',
   }))
 
   return {
     goal,
-    summary:
-      modifier === 'refine'
-        ? '已根据你的反馈把节奏收紧，并保留了核心动作。'
-        : modifier === 'fresh'
-          ? '已重新生成一版更清晰的计划。'
-          : '我已经把你的想法拆成了目标、任务和排期。',
+    summary: '这是一份本地模拟的结构化计划，用于展示目标、行动项和日程之间的关系。',
     plan,
     tasks,
     schedule,
@@ -238,172 +224,47 @@ function buildPlan(prompt: string, modifier: 'draft' | 'refine' | 'fresh' = 'dra
 const initialGoals: Goal[] = [
   makeGoal({
     id: 1,
-    title: '建立稳定运动习惯',
-    description: '把运动、饮食和恢复串成一个持续推进的系统。',
-    type: 'short_term',
+    title: '完成 Rhythmiq MVP',
+    description: '先跑通目标和行动项的本地闭环。',
+    outcome: '用户可以管理目标，并把目标拆成可执行行动项。',
+    success_criteria: ['目标可 CRUD', '行动项可 CRUD', '状态可维护'],
     priority: 'high',
-    status: 'active',
-    progress: 64,
-    deadline: '2026-05-31',
-  }),
-  makeGoal({
-    id: 2,
-    title: '推进产品学习输出',
-    description: '围绕学习、整理和复盘形成稳定输出节奏。',
-    type: 'short_term',
-    priority: 'medium',
-    status: 'active',
-    progress: 41,
-    deadline: '2026-06-20',
-  }),
-  makeGoal({
-    id: 3,
-    title: '优化工作日排布',
-    description: '让固定日程、任务和个人恢复更平衡。',
-    type: 'long_term',
-    priority: 'low',
-    status: 'archived',
-    progress: 100,
-    deadline: '2026-03-18',
+    progress: 35,
+    start_date: nowIso().slice(0, 10),
   }),
 ]
 
 const initialTasks: Task[] = [
   makeTask({
-    id: 11,
+    id: 1,
     goal_id: 1,
-    title: '周一晚间力量训练',
-    description: '30 分钟低门槛动作。',
-    status: 'done',
+    title: '设计 Goal 模型',
+    expected_output: '确定字段、状态和页面行为',
     priority: 'high',
-    estimated_minutes: 30,
-    prefer_morning: false,
-    needs_focus: true,
-    tags: 'habit',
-  }),
-  makeTask({
-    id: 12,
-    goal_id: 1,
-    title: '整理一周饮食结构',
-    description: '减少选择成本。',
-    status: 'in_progress',
-    priority: 'medium',
-    estimated_minutes: 45,
-    prefer_morning: true,
-    needs_focus: true,
-    tags: 'planning',
-    subtasks: [
-      makeSubtask({
-        id: 121,
-        task_id: 12,
-        title: '整理早餐模板',
-        description: '先压缩最容易犹豫的一餐。',
-        priority: 'high',
-        estimated_minutes: 15,
-        prefer_window: 'morning',
-        sequence: 1,
-        llm_generated: true,
-      }),
-      makeSubtask({
-        id: 122,
-        task_id: 12,
-        title: '确认午晚餐采购清单',
-        description: '减少临时决策。',
-        priority: 'medium',
-        estimated_minutes: 20,
-        prefer_window: 'afternoon',
-        sequence: 2,
-        llm_generated: true,
-      }),
-    ],
-  }),
-  makeTask({
-    id: 13,
-    goal_id: 1,
-    title: '周末长距离步行',
-    description: '提升恢复和耐力。',
-    status: 'todo',
-    priority: 'low',
-    estimated_minutes: 60,
-    prefer_morning: true,
-    needs_focus: false,
-    tags: 'outdoor',
-  }),
-  makeTask({
-    id: 21,
-    goal_id: 2,
-    title: '阅读并输出一个主题',
-    description: '形成可复用笔记。',
-    status: 'todo',
-    priority: 'high',
-    estimated_minutes: 50,
-    prefer_morning: true,
-    needs_focus: true,
-    tags: 'learning',
-    subtasks: [
-      makeSubtask({
-        id: 211,
-        task_id: 21,
-        title: '挑选主题与资料',
-        priority: 'high',
-        estimated_minutes: 20,
-        prefer_window: 'morning',
-        sequence: 1,
-        llm_generated: true,
-      }),
-      makeSubtask({
-        id: 212,
-        task_id: 21,
-        title: '输出一页摘要',
-        priority: 'medium',
-        estimated_minutes: 30,
-        prefer_window: 'afternoon',
-        sequence: 2,
-        llm_generated: true,
-      }),
-    ],
-  }),
-  makeTask({
-    id: 22,
-    goal_id: 2,
-    title: '整理学习卡片',
-    description: '把零散材料归档。',
+    sequence: 1,
     status: 'done',
-    priority: 'medium',
-    estimated_minutes: 25,
-    prefer_morning: false,
-    needs_focus: false,
-    tags: 'review',
   }),
   makeTask({
-    id: 23,
-    goal_id: 2,
-    title: '复盘本周成果',
-    description: '保持输出闭环。',
-    status: 'todo',
+    id: 2,
+    goal_id: 1,
+    title: '实现行动项管理',
+    expected_output: '目标详情页可以维护行动项',
     priority: 'medium',
-    estimated_minutes: 30,
-    prefer_morning: false,
-    needs_focus: true,
-    tags: 'review',
+    sequence: 2,
   }),
 ]
 
 const initialHabits: Habit[] = [
-  { id: 1, name: '早起冥想', streak: 12, completion: 1, active: true, category: 'habit' },
-  { id: 2, name: '晚间复盘', streak: 7, completion: 1, active: true, category: 'habit' },
-  { id: 3, name: '午间散步', streak: 3, completion: 0, active: true, category: 'routine' },
-  { id: 4, name: '固定拉伸', streak: 18, completion: 1, active: false, category: 'habit' },
+  { id: 1, name: '晚间复盘', streak: 5, completion: 1, active: true, category: 'routine' },
+  { id: 2, name: '力量训练', streak: 3, completion: 0, active: true, category: 'habit' },
 ]
 
 const initialSchedules: ScheduleItem[] = [
-  { id: 1, day: 'mon', start: '09:00', end: '10:00', title: '周例会', kind: 'routine', note: '固定日程' },
-  { id: 2, day: 'mon', start: '18:30', end: '19:00', title: '晚间拉伸', kind: 'habit', note: '每日习惯' },
-  { id: 3, day: 'tue', start: '08:30', end: '09:30', title: '深度工作块', kind: 'task', goalId: 1, taskId: 12, note: '推进目标' },
-  { id: 4, day: 'wed', start: '12:30', end: '13:00', title: '午间散步', kind: 'habit', note: '恢复节奏' },
-  { id: 5, day: 'thu', start: '15:00', end: '16:30', title: '研究与整理', kind: 'task', goalId: 2, taskId: 21, note: '目标推进' },
-  { id: 6, day: 'fri', start: '10:00', end: '11:00', title: '固定复盘会', kind: 'routine', note: '周固定安排' },
+  { id: 1, day: getWeekdayLabel(new Date()), start: '09:30', end: '10:30', title: '目标推进', kind: 'task', goalId: 1, taskId: 2 },
+  { id: 2, day: getWeekdayLabel(new Date()), start: '21:00', end: '21:30', title: '晚间复盘', kind: 'habit' },
 ]
+
+const initialDraft = buildPlan('我想优化我的节奏')
 
 const initialMessages: AgentMessage[] = [
   {
@@ -411,10 +272,11 @@ const initialMessages: AgentMessage[] = [
     role: 'assistant',
     content: {
       type: 'text',
-      text: '我会先帮你把想法整理成目标、计划、任务和排期，然后再放进你的习惯系统里。',
+      text: '告诉我你想推进的目标，我会先生成本地结构化草稿。真实 LLM 放到第二期。',
     },
     createdAt: nowIso(),
   },
+  makePlanMessage(2, initialDraft),
 ]
 
 interface RhythmiqState {
@@ -440,10 +302,6 @@ interface RhythmiqState {
   createTask: (goalId: number, task: TaskDraft) => Task
   updateTask: (taskId: number, patch: Partial<Task>) => void
   deleteTask: (taskId: number) => void
-  createSubtask: (taskId: number, subtask: SubtaskDraft) => Subtask
-  updateSubtask: (subtaskId: number, patch: Partial<Subtask>) => void
-  deleteSubtask: (subtaskId: number) => void
-  decomposeTask: (taskId: number) => Subtask[]
   toggleGoalTask: (goalId: number, taskId: number) => void
   toggleHabit: (habitId: number) => void
   selectGoal: (goalId: number) => void
@@ -472,13 +330,6 @@ function recalcGoalProgress(goals: Goal[], tasks: Task[], goalId: number) {
   )
 }
 
-function removeTaskSubtask(tasks: Task[], subtaskId: number) {
-  return tasks.map((task) => ({
-    ...task,
-    subtasks: (task.subtasks ?? []).filter((subtask) => subtask.id !== subtaskId),
-  }))
-}
-
 function planToMessage(draft: AgentPlan, id = Date.now()): AgentPlanMessage {
   return makePlanMessage(id, draft)
 }
@@ -489,7 +340,7 @@ export const useRhythmiqStore = create<RhythmiqState>()((set, get) => ({
   habits: initialHabits,
   schedules: initialSchedules,
   messages: initialMessages,
-  draftPlan: buildPlan('我想优化我的节奏'),
+  draftPlan: initialDraft,
   selectedGoalId: 1,
   todayProgress: todayCompletion(initialHabits, initialTasks),
 
@@ -519,17 +370,14 @@ export const useRhythmiqStore = create<RhythmiqState>()((set, get) => ({
       const mergedGoals = [draft.goal, ...state.goals.filter((goal) => goal.id !== draft.goal.id)]
       const mergedTasks = [...draft.tasks, ...state.tasks.filter((task) => task.goal_id !== draft.goal.id)]
       const progress = recalcProgress(mergedTasks, draft.goal.id)
-      const nextDraft = {
-        ...draft,
-        goal: { ...draft.goal, progress, tasks: draft.tasks },
-      }
+      const nextGoal = { ...draft.goal, progress, tasks: draft.tasks }
 
       return {
-        goals: mergedGoals.map((goal) => (goal.id === draft.goal.id ? nextDraft.goal : goal)),
+        goals: mergedGoals.map((goal) => (goal.id === draft.goal.id ? nextGoal : goal)),
         tasks: mergedTasks,
         schedules: [...draft.schedule, ...state.schedules.filter((item) => item.goalId !== draft.goal.id)],
         selectedGoalId: draft.goal.id,
-        draftPlan: nextDraft,
+        draftPlan: { ...draft, goal: nextGoal },
         todayProgress: todayCompletion(state.habits, mergedTasks),
         messages: [
           ...state.messages,
@@ -602,11 +450,15 @@ export const useRhythmiqStore = create<RhythmiqState>()((set, get) => ({
     const created = makeGoal({
       id: nextId(get().goals, 1000),
       title: goal.title,
+      parent_goal_id: goal.parent_goal_id,
       description: goal.description ?? '',
-      type: goal.type ?? 'short_term',
+      outcome: goal.outcome ?? '',
+      success_criteria: goal.success_criteria ?? [],
       status: goal.status ?? 'active',
       priority: goal.priority ?? 'medium',
-      deadline: goal.deadline,
+      start_date: goal.start_date,
+      target_date: goal.target_date,
+      review_date: goal.review_date,
       progress: goal.progress ?? 0,
     })
 
@@ -621,13 +473,7 @@ export const useRhythmiqStore = create<RhythmiqState>()((set, get) => ({
   updateGoal: (goalId, patch) => {
     set((state) => ({
       goals: state.goals.map((goal) =>
-        goal.id === goalId
-          ? {
-              ...goal,
-              ...patch,
-              updated_at: nowIso(),
-            }
-          : goal,
+        goal.id === goalId ? { ...goal, ...patch, updated_at: nowIso() } : goal,
       ),
     }))
   },
@@ -650,9 +496,7 @@ export const useRhythmiqStore = create<RhythmiqState>()((set, get) => ({
 
   addSchedule: (schedule) => {
     const created = { ...schedule, id: Date.now() }
-    set((state) => ({
-      schedules: [created, ...state.schedules],
-    }))
+    set((state) => ({ schedules: [created, ...state.schedules] }))
     return created
   },
 
@@ -676,6 +520,7 @@ export const useRhythmiqStore = create<RhythmiqState>()((set, get) => ({
       goal_id: goalId,
       title: task.title,
       description: task.description ?? '',
+      expected_output: task.expected_output ?? '',
       status: task.status ?? 'todo',
       priority: task.priority ?? 'medium',
       estimated_minutes: task.estimated_minutes ?? 30,
@@ -683,15 +528,18 @@ export const useRhythmiqStore = create<RhythmiqState>()((set, get) => ({
       due_date: task.due_date,
       prefer_morning: task.prefer_morning ?? false,
       needs_focus: task.needs_focus ?? false,
+      sequence: task.sequence ?? get().tasks.filter((item) => item.goal_id === goalId).length + 1,
       tags: task.tags ?? '',
-      subtasks: task.subtasks,
     })
 
-    set((state) => ({
-      tasks: [created, ...state.tasks],
-      goals: recalcGoalProgress(state.goals, [created, ...state.tasks], goalId),
-      todayProgress: todayCompletion(state.habits, [created, ...state.tasks]),
-    }))
+    set((state) => {
+      const tasks = [created, ...state.tasks]
+      return {
+        tasks,
+        goals: recalcGoalProgress(state.goals, tasks, goalId),
+        todayProgress: todayCompletion(state.habits, tasks),
+      }
+    })
 
     return created
   },
@@ -699,13 +547,7 @@ export const useRhythmiqStore = create<RhythmiqState>()((set, get) => ({
   updateTask: (taskId, patch) => {
     set((state) => {
       const tasks = state.tasks.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              ...patch,
-              updated_at: nowIso(),
-            }
-          : task,
+        task.id === taskId ? { ...task, ...patch, updated_at: nowIso() } : task,
       )
       const changed = tasks.find((task) => task.id === taskId)
       const goals = changed?.goal_id != null ? recalcGoalProgress(state.goals, tasks, changed.goal_id) : state.goals
@@ -731,138 +573,16 @@ export const useRhythmiqStore = create<RhythmiqState>()((set, get) => ({
     })
   },
 
-  createSubtask: (taskId, subtask) => {
-    const created = makeSubtask({
-      id: nextId(get().tasks.flatMap((task) => task.subtasks ?? []), 5000),
-      task_id: taskId,
-      title: subtask.title,
-      description: subtask.description ?? '',
-      status: subtask.status ?? 'todo',
-      priority: subtask.priority ?? 'medium',
-      estimated_minutes: subtask.estimated_minutes ?? 15,
-      actual_minutes: subtask.actual_minutes ?? 0,
-      prefer_window: subtask.prefer_window ?? 'any',
-      sequence: subtask.sequence ?? (get().tasks.find((task) => task.id === taskId)?.subtasks?.length ?? 0) + 1,
-      depends_on_subtask_id: subtask.depends_on_subtask_id,
-      llm_generated: subtask.llm_generated ?? false,
-    })
-
-    set((state) => ({
-      tasks: state.tasks.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              subtasks: [...(task.subtasks ?? []), created],
-              updated_at: nowIso(),
-            }
-          : task,
-      ),
-    }))
-
-    return created
-  },
-
-  updateSubtask: (subtaskId, patch) => {
-    set((state) => {
-      const tasks = state.tasks.map((task) => ({
-        ...task,
-        subtasks: (task.subtasks ?? []).map((subtask) =>
-          subtask.id === subtaskId
-            ? {
-                ...subtask,
-                ...patch,
-                updated_at: nowIso(),
-              }
-            : subtask,
-        ),
-      }))
-
-      const owningTask = tasks.find((task) => (task.subtasks ?? []).some((subtask) => subtask.id === subtaskId))
-      const goals =
-        owningTask?.goal_id != null ? recalcGoalProgress(state.goals, tasks, owningTask.goal_id) : state.goals
-
-      return {
-        tasks,
-        goals,
-      }
-    })
-  },
-
-  deleteSubtask: (subtaskId) => {
-    set((state) => {
-      const task = state.tasks.find((item) => (item.subtasks ?? []).some((subtask) => subtask.id === subtaskId))
-      const tasks = removeTaskSubtask(state.tasks, subtaskId)
-      const goals = task?.goal_id != null ? recalcGoalProgress(state.goals, tasks, task.goal_id) : state.goals
-
-      return {
-        tasks,
-        goals,
-      }
-    })
-  },
-
-  decomposeTask: (taskId) => {
-    const task = get().tasks.find((item) => item.id === taskId)
-    if (!task) return []
-
-    const seed = task.title.replace(/[：:]/g, ' ').trim()
-    const subtasks = [
-      `${seed} - 梳理范围`,
-      `${seed} - 形成执行动作`,
-      `${seed} - 检查完成条件`,
-    ]
-
-    const created = subtasks.map((title, index) =>
-      makeSubtask({
-        id: nextId(get().tasks.flatMap((item) => item.subtasks ?? []), 6000) + index,
-        task_id: taskId,
-        title,
-        description: index === 0 ? '先收窄问题边界。' : index === 1 ? '把动作拆到更小颗粒度。' : '确认什么算完成。',
-        priority: index === 0 ? 'high' : index === 1 ? 'medium' : 'low',
-        estimated_minutes: 10 + index * 10,
-        prefer_window: index === 0 ? 'morning' : index === 1 ? 'afternoon' : 'any',
-        sequence: index + 1,
-        llm_generated: true,
-      }),
-    )
-
-    set((state) => {
-      const tasks = state.tasks.map((item) =>
-        item.id === taskId
-          ? {
-              ...item,
-              subtasks: [...(item.subtasks ?? []), ...created],
-              updated_at: nowIso(),
-            }
-          : item,
-      )
-
-      return {
-        tasks,
-        goals: task.goal_id != null ? recalcGoalProgress(state.goals, tasks, task.goal_id) : state.goals,
-      }
-    })
-
-    return created
-  },
-
   toggleGoalTask: (goalId, taskId) => {
     set((state) => {
       const tasks = state.tasks.map((task) =>
         task.id === taskId
-          ? {
-              ...task,
-              status: task.status === 'done' ? ('todo' as TaskStatus) : ('done' as TaskStatus),
-              updated_at: nowIso(),
-            }
+          ? { ...task, status: task.status === 'done' ? ('todo' as TaskStatus) : ('done' as TaskStatus), updated_at: nowIso() }
           : task,
       )
-
       return {
         tasks,
-        goals: state.goals.map((goal) =>
-          goal.id === goalId ? { ...goal, progress: recalcProgress(tasks, goalId), updated_at: nowIso() } : goal,
-        ),
+        goals: recalcGoalProgress(state.goals, tasks, goalId),
         todayProgress: todayCompletion(state.habits, tasks),
       }
     })
@@ -872,14 +592,9 @@ export const useRhythmiqStore = create<RhythmiqState>()((set, get) => ({
     set((state) => {
       const habits = state.habits.map((habit) =>
         habit.id === habitId
-          ? {
-              ...habit,
-              completion: habit.completion ? 0 : 1,
-              streak: habit.completion ? habit.streak : habit.streak + 1,
-            }
+          ? { ...habit, completion: habit.completion ? 0 : 1, streak: habit.completion ? habit.streak : habit.streak + 1 }
           : habit,
       )
-
       return {
         habits,
         todayProgress: todayCompletion(habits, state.tasks),

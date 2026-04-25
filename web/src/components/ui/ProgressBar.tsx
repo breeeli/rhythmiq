@@ -11,7 +11,7 @@ interface ProgressBarProps {
 }
 
 const tones: Record<ProgressTone, string> = {
-  primary: 'bg-sky-500',
+  primary: 'bg-teal-500',
   success: 'bg-emerald-500',
   warning: 'bg-amber-500',
   neutral: 'bg-slate-400',
@@ -28,8 +28,8 @@ export function ProgressBar({ value, tone = 'primary', showLabel = true, label, 
           <span className="font-semibold text-slate-900">{Math.round(normalized)}%</span>
         </div>
       )}
-      <div className="h-2.5 rounded-full bg-slate-100">
-        <div className={clsx('h-2.5 rounded-full transition-all', tones[tone])} style={{ width: `${normalized}%` }} />
+      <div className="h-2.5 rounded-md bg-slate-100">
+        <div className={clsx('h-2.5 rounded-md transition-all', tones[tone])} style={{ width: `${normalized}%` }} />
       </div>
     </div>
   )

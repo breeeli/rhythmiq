@@ -36,7 +36,7 @@ interface CalendarFormState {
 
 const recurrenceDot: Record<RecurrenceType, string> = {
   DAILY: 'bg-emerald-500',
-  WEEKLY: 'bg-sky-500',
+  WEEKLY: 'bg-teal-500',
   NONE: 'bg-slate-400',
 }
 
@@ -107,7 +107,7 @@ function getDayBlocks(date: Date, blocks: TimeBlockRule[]) {
 
 function recurrenceRowClass(type: RecurrenceType) {
   if (type === 'DAILY') return 'border-emerald-100 bg-emerald-50/70'
-  if (type === 'WEEKLY') return 'border-sky-100 bg-sky-50/70'
+  if (type === 'WEEKLY') return 'border-teal-100 bg-teal-50/70'
   return 'border-slate-200 bg-slate-50/80'
 }
 
@@ -157,7 +157,7 @@ function ScheduleModal({
                   value={form.title}
                   onChange={(event) => onChange((state) => ({ ...state, title: event.target.value }))}
                   placeholder="例如：午间散步、深度工作、项目复盘"
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-400 focus:ring-4 focus:ring-teal-100"
                 />
               </label>
 
@@ -178,7 +178,7 @@ function ScheduleModal({
                           : state.daysOfWeek,
                     }))
                   }}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-teal-400 focus:ring-4 focus:ring-teal-100"
                 >
                   <option value="NONE">一次性</option>
                   <option value="DAILY">每日</option>
@@ -195,7 +195,7 @@ function ScheduleModal({
                   required
                   value={form.startTime}
                   onChange={(event) => onChange((state) => ({ ...state, startTime: event.target.value }))}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-teal-400 focus:ring-4 focus:ring-teal-100"
                 />
               </label>
 
@@ -206,7 +206,7 @@ function ScheduleModal({
                   required
                   value={form.endTime}
                   onChange={(event) => onChange((state) => ({ ...state, endTime: event.target.value }))}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-teal-400 focus:ring-4 focus:ring-teal-100"
                 />
               </label>
             </div>
@@ -233,7 +233,7 @@ function ScheduleModal({
                         className={clsx(
                           'rounded-2xl border px-4 py-2 text-sm font-medium transition',
                           active
-                            ? 'border-sky-200 bg-sky-50 text-sky-700 shadow-sm'
+                            ? 'border-teal-200 bg-teal-50 text-teal-700 shadow-sm'
                             : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50',
                         )}
                       >
@@ -260,7 +260,7 @@ function ScheduleModal({
                   required
                   value={form.date}
                   onChange={(event) => onChange((state) => ({ ...state, date: event.target.value }))}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-teal-400 focus:ring-4 focus:ring-teal-100"
                 />
               </label>
             )}
@@ -482,8 +482,8 @@ export default function CalendarPage() {
                   }}
                   className={clsx(
                     'group relative border-r border-b border-slate-200/80 p-3 text-left transition',
-                    'cursor-pointer select-none hover:bg-slate-50/90 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-400',
-                    isSelected && 'bg-sky-50/90',
+                    'cursor-pointer select-none hover:bg-slate-50/90 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal-400',
+                    isSelected && 'bg-teal-50/90',
                     !isSelected && 'bg-white',
                   )}
                 >
@@ -505,7 +505,7 @@ export default function CalendarPage() {
                         event.stopPropagation()
                         openComposer(cell)
                       }}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 opacity-0 shadow-sm transition group-hover:opacity-100 hover:border-sky-200 hover:text-sky-500"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 opacity-0 shadow-sm transition group-hover:opacity-100 hover:border-teal-200 hover:text-teal-500"
                       aria-label={`新增 ${formatDayShort(cell)} 的日程`}
                     >
                       <Plus className="h-4 w-4" />

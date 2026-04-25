@@ -24,7 +24,7 @@ export function TaskList({ tasks, onToggle }: TaskListProps) {
               key={task.id}
               type="button"
               onClick={() => onToggle?.(task.id)}
-              className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-sky-200 hover:bg-sky-50/40"
+              className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-teal-200 hover:bg-teal-50/40"
             >
               <span
                 className={[
