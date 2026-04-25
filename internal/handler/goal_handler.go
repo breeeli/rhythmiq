@@ -26,11 +26,20 @@ func (h *GoalHandler) Create(c *gin.Context) {
 	}
 
 	var req struct {
-		Title       string              `json:"title" binding:"required"`
-		Description string              `json:"description"`
-		Type        domain.GoalType     `json:"type"`
-		Priority    domain.GoalPriority `json:"priority"`
-		Deadline    *time.Time          `json:"deadline"`
+		Title           string              `json:"title" binding:"required"`
+		ParentGoalID    *uint               `json:"parent_goal_id"`
+		Description     string              `json:"description"`
+		Status          domain.GoalStatus   `json:"status"`
+		Source          domain.GoalSource   `json:"source"`
+		Priority        domain.GoalPriority `json:"priority"`
+		Deadline        *time.Time          `json:"deadline"`
+		StartDate       *time.Time          `json:"start_date"`
+		TargetDate      *time.Time          `json:"target_date"`
+		ReviewDate      *time.Time          `json:"review_date"`
+		Outcome         string              `json:"outcome"`
+		SuccessCriteria []string            `json:"success_criteria"`
+		Motivation      string              `json:"motivation"`
+		Progress        int                 `json:"progress"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
@@ -38,13 +47,26 @@ func (h *GoalHandler) Create(c *gin.Context) {
 	}
 
 	goal, err := h.svc.Create(c.Request.Context(), userID, service.CreateGoalRequest{
-		Title:       req.Title,
-		Description: req.Description,
-		Type:        req.Type,
-		Priority:    req.Priority,
-		Deadline:    req.Deadline,
+		Title:           req.Title,
+		ParentGoalID:    req.ParentGoalID,
+		Description:     req.Description,
+		Status:          req.Status,
+		Source:          req.Source,
+		Priority:        req.Priority,
+		Deadline:        req.Deadline,
+		StartDate:       req.StartDate,
+		TargetDate:      req.TargetDate,
+		ReviewDate:      req.ReviewDate,
+		Outcome:         req.Outcome,
+		SuccessCriteria: req.SuccessCriteria,
+		Motivation:      req.Motivation,
+		Progress:        req.Progress,
 	})
 	if err != nil {
+		if service.IsValidationError(err) {
+			response.BadRequest(c, err.Error())
+			return
+		}
 		response.InternalError(c, err.Error())
 		return
 	}
@@ -114,12 +136,20 @@ func (h *GoalHandler) Update(c *gin.Context) {
 	}
 
 	var req struct {
-		Title       string              `json:"title"`
-		Description string              `json:"description"`
-		Status      domain.GoalStatus   `json:"status"`
-		Priority    domain.GoalPriority `json:"priority"`
-		Deadline    *time.Time          `json:"deadline"`
-		Progress    int                 `json:"progress"`
+		Title           string              `json:"title"`
+		ParentGoalID    *uint               `json:"parent_goal_id"`
+		Description     string              `json:"description"`
+		Status          domain.GoalStatus   `json:"status"`
+		Source          domain.GoalSource   `json:"source"`
+		Priority        domain.GoalPriority `json:"priority"`
+		Deadline        *time.Time          `json:"deadline"`
+		StartDate       *time.Time          `json:"start_date"`
+		TargetDate      *time.Time          `json:"target_date"`
+		ReviewDate      *time.Time          `json:"review_date"`
+		Outcome         string              `json:"outcome"`
+		SuccessCriteria []string            `json:"success_criteria"`
+		Motivation      string              `json:"motivation"`
+		Progress        *int                `json:"progress"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
@@ -127,14 +157,26 @@ func (h *GoalHandler) Update(c *gin.Context) {
 	}
 
 	goal, err := h.svc.Update(c.Request.Context(), id, service.UpdateGoalRequest{
-		Title:       req.Title,
-		Description: req.Description,
-		Status:      req.Status,
-		Priority:    req.Priority,
-		Deadline:    req.Deadline,
-		Progress:    req.Progress,
+		Title:           req.Title,
+		ParentGoalID:    req.ParentGoalID,
+		Description:     req.Description,
+		Status:          req.Status,
+		Source:          req.Source,
+		Priority:        req.Priority,
+		Deadline:        req.Deadline,
+		StartDate:       req.StartDate,
+		TargetDate:      req.TargetDate,
+		ReviewDate:      req.ReviewDate,
+		Outcome:         req.Outcome,
+		SuccessCriteria: req.SuccessCriteria,
+		Motivation:      req.Motivation,
+		Progress:        req.Progress,
 	})
 	if err != nil {
+		if service.IsValidationError(err) {
+			response.BadRequest(c, err.Error())
+			return
+		}
 		response.InternalError(c, err.Error())
 		return
 	}

@@ -29,7 +29,6 @@ func (g *GoalGenerator) GenerateGoal(_ context.Context, req *ai.GoalGenerationRe
 		Goal: ai.GoalSuggestion{
 			Title:       guessTitle(prompt),
 			Description: buildGoalDescription(prompt, contextText),
-			Type:        domain.GoalTypeShortTerm,
 			Priority:    domain.GoalPriorityMedium,
 			Deadline:    deadlinePtr(14 * 24 * time.Hour),
 			Tasks: []ai.TaskOutline{
@@ -54,7 +53,6 @@ func (g *GoalGenerator) GenerateGoal(_ context.Context, req *ai.GoalGenerationRe
 	if strings.Contains(prompt, "学习") || strings.Contains(prompt, "考试") || strings.Contains(prompt, "课程") {
 		result.Goal.Title = "提升学习效率"
 		result.Goal.Description = "通过分阶段学习和定期复盘，提升学习效率和输出质量。"
-		result.Goal.Type = domain.GoalTypeLongTerm
 		result.Goal.Tasks = []ai.TaskOutline{
 			{Title: "整理学习大纲", Description: "先把知识点和目标拆清楚。", Priority: domain.TaskPriorityHigh, EstimatedMinutes: 40},
 			{Title: "安排每日练习", Description: "安排稳定的学习与练习节奏。", Priority: domain.TaskPriorityHigh, EstimatedMinutes: 60},

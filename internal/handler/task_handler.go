@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/breeeli/rhythmiq/internal/domain"
 	"github.com/breeeli/rhythmiq/internal/service"
 	"github.com/breeeli/rhythmiq/pkg/response"
+	"github.com/gin-gonic/gin"
 )
 
 type TaskHandler struct {
@@ -29,11 +29,14 @@ func (h *TaskHandler) Create(c *gin.Context) {
 		GoalID           *uint               `json:"goal_id"`
 		Title            string              `json:"title" binding:"required"`
 		Description      string              `json:"description"`
+		ExpectedOutput   string              `json:"expected_output"`
+		Status           domain.TaskStatus   `json:"status"`
 		Priority         domain.TaskPriority `json:"priority"`
 		EstimatedMinutes int                 `json:"estimated_minutes"`
 		DueDate          *time.Time          `json:"due_date"`
 		PreferMorning    bool                `json:"prefer_morning"`
 		NeedsFocus       bool                `json:"needs_focus"`
+		Sequence         int                 `json:"sequence"`
 		Tags             string              `json:"tags"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -45,14 +48,21 @@ func (h *TaskHandler) Create(c *gin.Context) {
 		GoalID:           req.GoalID,
 		Title:            req.Title,
 		Description:      req.Description,
+		ExpectedOutput:   req.ExpectedOutput,
+		Status:           req.Status,
 		Priority:         req.Priority,
 		EstimatedMinutes: req.EstimatedMinutes,
 		DueDate:          req.DueDate,
 		PreferMorning:    req.PreferMorning,
 		NeedsFocus:       req.NeedsFocus,
+		Sequence:         req.Sequence,
 		Tags:             req.Tags,
 	})
 	if err != nil {
+		if service.IsValidationError(err) {
+			response.BadRequest(c, err.Error())
+			return
+		}
 		response.InternalError(c, err.Error())
 		return
 	}
@@ -97,11 +107,13 @@ func (h *TaskHandler) Update(c *gin.Context) {
 	var req struct {
 		Title            string              `json:"title"`
 		Description      string              `json:"description"`
+		ExpectedOutput   string              `json:"expected_output"`
 		Status           domain.TaskStatus   `json:"status"`
 		Priority         domain.TaskPriority `json:"priority"`
 		EstimatedMinutes int                 `json:"estimated_minutes"`
 		ActualMinutes    int                 `json:"actual_minutes"`
 		DueDate          *time.Time          `json:"due_date"`
+		Sequence         *int                `json:"sequence"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
@@ -111,13 +123,19 @@ func (h *TaskHandler) Update(c *gin.Context) {
 	task, err := h.svc.Update(c.Request.Context(), taskID, service.UpdateTaskRequest{
 		Title:            req.Title,
 		Description:      req.Description,
+		ExpectedOutput:   req.ExpectedOutput,
 		Status:           req.Status,
 		Priority:         req.Priority,
 		EstimatedMinutes: req.EstimatedMinutes,
 		ActualMinutes:    req.ActualMinutes,
 		DueDate:          req.DueDate,
+		Sequence:         req.Sequence,
 	})
 	if err != nil {
+		if service.IsValidationError(err) {
+			response.BadRequest(c, err.Error())
+			return
+		}
 		response.InternalError(c, err.Error())
 		return
 	}
@@ -135,19 +153,4 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
-}
-
-func (h *TaskHandler) Decompose(c *gin.Context) {
-	taskID, err := parseUint(c.Param("taskID"))
-	if err != nil {
-		response.BadRequest(c, "invalid task id")
-		return
-	}
-
-	task, err := h.svc.Decompose(c.Request.Context(), taskID)
-	if err != nil {
-		response.InternalError(c, err.Error())
-		return
-	}
-	response.OK(c, task)
 }

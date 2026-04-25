@@ -22,7 +22,14 @@ func (r *goalRepo) Create(ctx context.Context, goal *domain.Goal) error {
 
 func (r *goalRepo) FindByID(ctx context.Context, id uint) (*domain.Goal, error) {
 	var goal domain.Goal
-	if err := r.db.WithContext(ctx).Preload("Tasks").First(&goal, id).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Preload("ChildGoals", func(db *gorm.DB) *gorm.DB {
+			return db.Order("created_at ASC")
+		}).
+		Preload("Tasks", func(db *gorm.DB) *gorm.DB {
+			return db.Order("sequence ASC, created_at ASC")
+		}).
+		First(&goal, id).Error; err != nil {
 		return nil, fmt.Errorf("goal not found: %w", err)
 	}
 	return &goal, nil
@@ -31,8 +38,14 @@ func (r *goalRepo) FindByID(ctx context.Context, id uint) (*domain.Goal, error) 
 func (r *goalRepo) FindByUserID(ctx context.Context, userID uint) ([]*domain.Goal, error) {
 	var goals []*domain.Goal
 	if err := r.db.WithContext(ctx).
+		Preload("ChildGoals", func(db *gorm.DB) *gorm.DB {
+			return db.Order("created_at ASC")
+		}).
+		Preload("Tasks", func(db *gorm.DB) *gorm.DB {
+			return db.Order("sequence ASC, created_at ASC")
+		}).
 		Where("user_id = ?", userID).
-		Order("priority DESC, created_at DESC").
+		Order("created_at DESC").
 		Find(&goals).Error; err != nil {
 		return nil, err
 	}

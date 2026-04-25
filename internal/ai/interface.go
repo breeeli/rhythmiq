@@ -30,22 +30,6 @@ type TaskOutline struct {
 	EstimatedMinutes int
 }
 
-type TaskDecompositionRequest struct {
-	Task *domain.Task
-}
-
-type SubtaskSuggestion struct {
-	Title            string
-	Description      string
-	Priority         domain.TaskPriority
-	EstimatedMinutes int
-	PreferWindow     string
-}
-
-type TaskDecompositionResult struct {
-	Subtasks []SubtaskSuggestion
-}
-
 type GoalGenerationRequest struct {
 	User        *domain.User
 	Prompt      string
@@ -55,7 +39,6 @@ type GoalGenerationRequest struct {
 type GoalSuggestion struct {
 	Title       string
 	Description string
-	Type        domain.GoalType
 	Priority    domain.GoalPriority
 	Deadline    *time.Time
 	Tasks       []TaskOutline
@@ -92,10 +75,6 @@ type CandidateBlock struct {
 // Implement this interface to swap providers (mock → OpenAI → DeepSeek).
 type Planner interface {
 	GenerateDailyPlan(ctx context.Context, req *PlanRequest) (*PlanResult, error)
-}
-
-type TaskDecomposer interface {
-	DecomposeTask(ctx context.Context, req *TaskDecompositionRequest) (*TaskDecompositionResult, error)
 }
 
 type GoalGenerator interface {

@@ -48,7 +48,6 @@ func main() {
 	userRepo := sqlite.NewUserRepo(db)
 	goalRepo := sqlite.NewGoalRepo(db)
 	taskRepo := sqlite.NewTaskRepo(db)
-	subtaskRepo := sqlite.NewSubtaskRepo(db)
 	planRepo := sqlite.NewPlanRepo(db)
 	scheduleRuleRepo := sqlite.NewScheduleRuleRepo(db)
 	habitRuleRepo := sqlite.NewHabitRuleRepo(db)
@@ -57,13 +56,11 @@ func main() {
 	// Wire AI planner (swap mock.New() with real implementation when ready)
 	planner := mock.New()
 	goalGenerator := mock.NewGoalGenerator()
-	taskDecomposer := mock.NewTaskDecomposer()
 
 	// Wire services
 	userSvc := service.NewUserService(userRepo)
 	goalSvc := service.NewGoalService(goalRepo, taskRepo, goalGenerator)
-	taskSvc := service.NewTaskService(taskRepo, subtaskRepo, taskDecomposer)
-	subtaskSvc := service.NewSubtaskService(subtaskRepo, taskRepo)
+	taskSvc := service.NewTaskService(taskRepo)
 	constraintSvc := service.NewPlanningConstraintService(scheduleRuleRepo, habitRuleRepo)
 	timeBlockSvc := service.NewTimeBlockService(timeBlockRepo)
 	plannerSvc := service.NewPlannerService(planRepo, taskRepo, userRepo, scheduleRuleRepo, habitRuleRepo, planner)
@@ -74,13 +71,12 @@ func main() {
 	userHandler := handler.NewUserHandler(userSvc)
 	goalHandler := handler.NewGoalHandler(goalSvc)
 	taskHandler := handler.NewTaskHandler(taskSvc)
-	subtaskHandler := handler.NewSubtaskHandler(subtaskSvc)
 	planHandler := handler.NewPlanHandler(plannerSvc)
 	constraintHandler := handler.NewPlanningConstraintHandler(constraintSvc)
 	timeBlockHandler := handler.NewTimeBlockHandler(timeBlockSvc)
 
 	gin.SetMode(cfg.Server.Mode)
-	router := handler.NewRouter(log, userHandler, goalHandler, taskHandler, subtaskHandler, planHandler, constraintHandler, timeBlockHandler)
+	router := handler.NewRouter(log, userHandler, goalHandler, taskHandler, planHandler, constraintHandler, timeBlockHandler)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
